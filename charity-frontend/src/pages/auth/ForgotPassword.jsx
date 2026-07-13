@@ -1,244 +1,247 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '../../context/LanguageContext';
 import axiosInstance from '../../api/axiosInstance';
 import toast from 'react-hot-toast';
-import { useLanguage } from '../../context/LanguageContext';
 
-const OTP_LENGTH = 6;
-const PWD_REGEX  = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-// Step 1: Enter email
-// Step 2: Enter OTP + new password
-// Step 3: Success
+const STEP_ICONS = ['📧', '🔐', '🎉'];
 
 export default function ForgotPassword() {
-  const navigate = useNavigate();
   const { t } = useLanguage();
-  const [step,      setStep]      = useState(1);
-  const [email,     setEmail]     = useState('');
-  const [otp,       setOtp]       = useState('');
-  const [newPwd,    setNewPwd]    = useState('');
-  const [showPwd,   setShowPwd]   = useState(false);
-  const [loading,   setLoading]   = useState(false);
-  const [cooldown,  setCooldown]  = useState(0);
-  const [resending, setResending] = useState(false);
+  const [step,     setStep]     = useState(0);   // 0=email, 1=otp+newpwd, 2=success
+  const [email,    setEmail]    = useState('');
+  const [otp,      setOtp]      = useState('');
+  const [newPwd,   setNewPwd]   = useState('');
+  const [confirm,  setConfirm]  = useState('');
+  const [showPwd,  setShowPwd]  = useState(false);
+  const [loading,  setLoading]  = useState(false);
+  const [errors,   setErrors]   = useState({});
 
-  // Step 1 — request OTP
-  const requestOtp = async (e) => {
-    e.preventDefault();
-    if (!email.trim()) { toast.error('Please enter your email'); return; }
-    setLoading(true);
-    try {
-      const r = await axiosInstance.post('/api/auth/forgot-password', { email: email.trim() });
-      setCooldown(30);
-      const interval = setInterval(() => setCooldown(c => {
-        if (c <= 1) { clearInterval(interval); return 0; } return c - 1;
-      }), 1000);
-      setStep(2);
-      toast.success(r.data?.message || 'Reset code sent! Check your inbox.', { icon: '📧', duration: 5000 });
-    } catch (err) {
-      const msg = err.response?.data?.message || '';
-      if (msg.includes('not verified')) {
-        toast.error('Please verify your account first before resetting password.', { duration: 6000 });
-      } else if (msg.includes('Please wait')) {
-        toast.error(msg);
-      } else if (err.response?.status === 400 || err.response?.status === 404) {
-        toast.error('No account found with this email. Please register first.');
-      } else {
-        // Move to step 2 anyway — prevent enumeration on 500 errors
-        setStep(2);
-        toast('Check your email if an account exists.', { icon: '📧' });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 2 — verify OTP + set new password
-  const resetPassword = async (e) => {
-    e.preventDefault();
-    if (otp.length !== OTP_LENGTH) { toast.error('Enter the full 6-digit code'); return; }
-    if (!PWD_REGEX.test(newPwd)) {
-      toast.error('Password needs 8+ chars with upper, lower, digit & special char');
+  /* ── Step 0: send OTP ─────────────────────────────── */
+  const sendOtp = async (ev) => {
+    ev.preventDefault();
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErrors({ email: t('val.emailInvalid') || 'Enter a valid email address' });
       return;
     }
     setLoading(true);
     try {
-      await axiosInstance.post('/api/auth/reset-password', {
-        email: email.trim(),
-        otp:   otp.trim(),
-        newPassword: newPwd,
-      });
-      setStep(3);
-      toast.success('Password reset successfully!');
+      await axiosInstance.post('/api/auth/forgot-password', { email });
+      toast.success('Reset code sent to your email! 📧');
+      setStep(1);
+      setErrors({});
     } catch (err) {
-      const msg = err.response?.data?.message || 'Invalid or expired code. Please try again.';
-      toast.error(msg, { duration: 5000 });
-      if (msg.includes('expired') || msg.includes('No OTP')) {
-        // Reset to step 1 if OTP expired completely
-        setOtp('');
-        setCooldown(0);
-      }
-    } finally {
-      setLoading(false);
-    }
+      setErrors({ email: err.response?.data?.message || 'No account found with this email.' });
+    } finally { setLoading(false); }
   };
 
-  const resendOtp = async () => {
-    if (cooldown > 0 || resending) return;
-    setResending(true);
+  /* ── Step 1: verify OTP + reset password ─────────── */
+  const resetPassword = async (ev) => {
+    ev.preventDefault();
+    const e = {};
+    if (!otp || otp.length !== 6) e.otp = t('val.otpInvalid') || 'OTP must be 6 digits';
+    if (!newPwd || newPwd.length < 8) e.newPwd = t('val.passwordWeak') || 'Min 8 characters';
+    if (newPwd !== confirm) e.confirm = t('val.passwordMismatch') || 'Passwords do not match';
+    if (Object.keys(e).length) { setErrors(e); return; }
+    setLoading(true);
     try {
-      await axiosInstance.post('/api/auth/forgot-password', { email: email.trim() });
-      setCooldown(30);
-      const interval = setInterval(() => setCooldown(c => { if (c <= 1) { clearInterval(interval); return 0; } return c - 1; }), 1000);
-      toast.success('New code sent!', { icon: '📧' });
-    } catch {}
-    finally { setResending(false); }
+      await axiosInstance.post('/api/auth/reset-password', { email, otp, newPassword: newPwd });
+      setStep(2);
+      setErrors({});
+    } catch (err) {
+      setErrors({ otp: err.response?.data?.message || 'Invalid or expired OTP.' });
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="auth-wrapper" style={{ minHeight:'100vh', position:'relative', overflow:'hidden' }}>
-      <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 70% 50% at 50% 0%,rgba(108,60,232,0.22) 0%,transparent 60%)' }} />
+    <div style={{ minHeight:'100vh', position:'relative', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', padding:'40px 16px' }}>
+      {/* bg */}
+      <motion.div style={{ position:'fixed', inset:0, zIndex:0, background:'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,58,237,0.28) 0%, transparent 60%)' }}
+        animate={{ opacity:[0.6,1,0.6] }} transition={{ duration:6, repeat:Infinity }}/>
 
-      <div className="auth-card" style={{ position:'relative', zIndex:1, maxWidth:460 }}>
+      {[{e:'🔑',x:6,y:12,d:0},{e:'🛡️',x:88,y:10,d:1},{e:'💜',x:10,y:80,d:2},{e:'✨',x:85,y:78,d:0.5}].map((p,i)=>(
+        <motion.div key={i} style={{ position:'fixed', left:`${p.x}%`, top:`${p.y}%`, fontSize:20, zIndex:0, pointerEvents:'none' }}
+          animate={{ y:[0,-16,0], opacity:[0.3,0.7,0.3] }} transition={{ duration:4+p.d, repeat:Infinity, delay:p.d }}>
+          {p.e}
+        </motion.div>
+      ))}
 
-        {/* Step 1 — Email */}
-        {step === 1 && (
-          <>
-            <div style={{ textAlign:'center', marginBottom:24 }}>
-              <div style={{ fontSize:52, marginBottom:8 }}>🔓</div>
-              <h1 className="auth-title gradient-text">{t('forgotPassword') || 'Forgot Password?'}</h1>
-              <p className="auth-subtitle">{t('enterRegisteredEmail') || 'Enter your registered email to receive a reset code.'}</p>
+      <motion.div style={{ width:'100%', maxWidth:440, position:'relative', zIndex:1 }}
+        initial={{ opacity:0, y:40 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5 }}>
+
+        {/* Progress steps */}
+        <div style={{ display:'flex', justifyContent:'center', gap:12, marginBottom:28 }}>
+          {['Send Code', 'Reset', 'Done'].map((label, i) => (
+            <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+              <motion.div
+                animate={{ scale: step===i ? 1.15 : 1 }}
+                style={{
+                  width:40, height:40, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:18, fontWeight:700,
+                  background: step>i ? 'linear-gradient(135deg,var(--primary),var(--primary-light))' : step===i ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)',
+                  border: step===i ? '2px solid var(--primary-light)' : step>i ? 'none' : '1px solid var(--border)',
+                  color: step===i ? 'var(--primary-light)' : step>i ? '#fff' : 'var(--text-muted)',
+                }}>
+                {step > i ? '✓' : STEP_ICONS[i]}
+              </motion.div>
+              <span style={{ fontSize:10, color: step===i ? 'var(--primary-light)' : 'var(--text-muted)', fontWeight: step===i ? 700 : 400 }}>{label}</span>
             </div>
-            <div className="card" style={{ padding:'36px 40px' }}>
-              <form onSubmit={requestOtp}>
+          ))}
+        </div>
+
+        <div style={{ textAlign:'center', marginBottom:24 }}>
+          <motion.div style={{ fontSize:52, lineHeight:1, marginBottom:8 }}
+            animate={{ rotate:[0,-5,5,0] }} transition={{ duration:4, repeat:Infinity }}>
+            {STEP_ICONS[step]}
+          </motion.div>
+          <h1 className="auth-title gradient-text">
+            {step===0 ? (t('auth.forgotTitle')||'Forgot Password?') : step===1 ? (t('auth.resetPassword')||'Reset Password') : (t('auth.passwordResetSuccess')||'Password Reset!')}
+          </h1>
+          <p className="auth-subtitle">
+            {step===0 ? "Enter your registered email to receive a reset code."
+            : step===1 ? `Enter the 6-digit code sent to ${email}`
+            : 'Your password has been reset successfully!'}
+          </p>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {step === 0 && (
+            <motion.div key="step0" className="glass-card" style={{ padding:'32px 36px' }}
+              initial={{ opacity:0, x:-30 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:30 }}
+              transition={{ duration:0.3 }}>
+              <form onSubmit={sendOtp} noValidate>
                 <div className="form-group">
-                  <label style={{ fontSize:13, fontWeight:600, color:'var(--text-muted)', marginBottom:8, display:'block' }}>
-                    {t('registeredEmail') || 'Registered Email'}
-                  </label>
+                  <label className="form-label">{t('auth.email')||'Email Address'}</label>
                   <div style={{ position:'relative' }}>
-                    <span style={{ position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',opacity:0.4 }}>✉️</span>
-                    <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
-                      placeholder="you@example.com" className="form-control"
-                      style={{ paddingLeft:42 }} autoFocus required />
+                    <span style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', opacity:0.5 }}>✉️</span>
+                    <input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErrors({})}}
+                      placeholder="your@email.com" className={`form-control${errors.email?' error':''}`}
+                      style={{ paddingLeft:42 }} autoComplete="email" autoFocus/>
                   </div>
+                  <AnimatePresence>
+                    {errors.email && (
+                      <motion.p initial={{ opacity:0,y:-5 }} animate={{ opacity:1,y:0 }} exit={{ opacity:0,y:-5 }}
+                        style={{ color:'#ef4444', fontSize:12, marginTop:4 }}>⚠ {errors.email}</motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <button type="submit" className="btn btn-primary w-full"
-                  disabled={loading} style={{ justifyContent:'center', padding:'14px', fontWeight:700 }}>
-                  {loading ? (
-                    <span style={{ display:'flex',alignItems:'center',gap:10 }}>
-                      <span style={{ width:16,height:16,border:'2px solid rgba(255,255,255,0.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin 0.7s linear infinite',display:'inline-block' }} />
-                      {t('sending') || 'Sending…'}
-                    </span>
-                  ) : `${t('sendResetCode') || 'Send Reset Code'} 📧`}
-                </button>
+                <SpinButton loading={loading} label={t('auth.sendResetCode')||'Send Reset Code 📧'}/>
               </form>
-              <div style={{ textAlign:'center',marginTop:20,fontSize:14 }}>
-                <Link to="/login" style={{ color:'var(--primary-light)' }}>{t('backToLogin') || '← Back to Login'}</Link>
+              <div style={{ marginTop:20, textAlign:'center' }}>
+                <Link to="/login" style={{ fontSize:13, color:'var(--primary-light)' }}>
+                  {t('auth.backToLogin')||'← Back to Login'}
+                </Link>
               </div>
-            </div>
-          </>
-        )}
+            </motion.div>
+          )}
 
-        {/* Step 2 — OTP + New Password */}
-        {step === 2 && (
-          <>
-            <button onClick={() => setStep(1)}
-              style={{ background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',gap:6,marginBottom:20,padding:'6px 0' }}>
-              {t('back') || '← Back'}
-            </button>
-            <div style={{ textAlign:'center', marginBottom:24 }}>
-              <div style={{ fontSize:52, marginBottom:8 }}>🔐</div>
-              <h1 className="auth-title gradient-text">{t('resetPassword') || 'Reset Password'}</h1>
-              <p style={{ color:'var(--text-muted)',fontSize:14,marginTop:8 }}>
-                {t('enterCodeSentTo') || 'Enter the code sent to'} <strong style={{ color:'var(--primary-light)' }}>{email}</strong>
-              </p>
-            </div>
-            <div style={{ background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.25)', borderRadius:10, padding:'12px 16px', marginBottom:16, fontSize:13 }}>
-              <p style={{ color:'#93c5fd', margin:0, lineHeight:1.6 }}>
-                📧 <strong>Check your inbox</strong> at <span style={{ color:'#a78bfa' }}>{email}</span>.
-              </p>
-              <p style={{ color:'#6b7280', margin:'6px 0 0', fontSize:12 }}>
-                ⚠️ Don't see it? Check <strong>Spam / Junk</strong> folder. Also visible in the backend terminal console.
-              </p>
-            </div>
-            <div className="card" style={{ padding:'32px 36px' }}>
-              <form onSubmit={resetPassword}>
-                {/* OTP input */}
+          {step === 1 && (
+            <motion.div key="step1" className="glass-card" style={{ padding:'32px 36px' }}
+              initial={{ opacity:0, x:30 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-30 }}
+              transition={{ duration:0.3 }}>
+              <form onSubmit={resetPassword} noValidate>
+                {/* OTP */}
                 <div className="form-group">
-                  <label style={{ fontSize:13,fontWeight:600,color:'var(--text-muted)',marginBottom:8,display:'block' }}>
-                    {t('verificationCode6Digits') || 'Verification Code (6 digits)'}
-                  </label>
-                  <input className="form-control" type="text" inputMode="numeric"
-                    maxLength={6} value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g,''))}
-                    placeholder="e.g. 123456" required
-                    style={{ fontSize:24, letterSpacing:12, textAlign:'center', fontFamily:'monospace' }} />
+                  <label className="form-label">🔢 {t('auth.verificationCode')||'Verification Code (6 digits)'}</label>
+                  <input value={otp} onChange={e=>{setOtp(e.target.value.replace(/\D/g,'').slice(0,6));setErrors(p=>({...p,otp:''}))}}
+                    placeholder="Enter 6-digit code"
+                    className={`form-control${errors.otp?' error':''}`}
+                    style={{ fontSize:22, letterSpacing:8, textAlign:'center' }}
+                    maxLength={6} inputMode="numeric"/>
+                  <AnimatePresence>
+                    {errors.otp && (
+                      <motion.p initial={{ opacity:0,y:-5 }} animate={{ opacity:1,y:0 }} exit={{ opacity:0,y:-5 }}
+                        style={{ color:'#ef4444', fontSize:12, marginTop:4 }}>⚠ {errors.otp}</motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* New password */}
                 <div className="form-group">
-                  <label style={{ fontSize:13,fontWeight:600,color:'var(--text-muted)',marginBottom:8,display:'block' }}>
-                    {t('newPassword') || 'New Password'}
-                  </label>
+                  <label className="form-label">🔑 {t('auth.newPassword')||'New Password'}</label>
                   <div style={{ position:'relative' }}>
-                    <input type={showPwd ? 'text' : 'password'} value={newPwd}
-                      onChange={e=>setNewPwd(e.target.value)}
-                      placeholder="Min 8 chars with upper, lower, digit, special"
-                      className="form-control" style={{ paddingRight:48 }} required />
+                    <input type={showPwd?'text':'password'} value={newPwd}
+                      onChange={e=>{setNewPwd(e.target.value);setErrors(p=>({...p,newPwd:''}))}}
+                      placeholder="Min 8 chars, upper+lower+digit+special"
+                      className={`form-control${errors.newPwd?' error':''}`}
+                      style={{ paddingRight:48 }} autoComplete="new-password"/>
                     <button type="button" onClick={()=>setShowPwd(p=>!p)}
-                      style={{ position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',fontSize:18,opacity:0.6 }}>
-                      {showPwd ? '🙈' : '👁️'}
+                      style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:18, opacity:0.6 }}>
+                      {showPwd?'🙈':'👁️'}
                     </button>
                   </div>
-                  <p style={{ fontSize:11,color:'var(--text-muted)',marginTop:4 }}>
-                    {t('passwordRequirementInfo') || 'Must include uppercase, lowercase, number and special character'}
-                  </p>
+                  <AnimatePresence>
+                    {errors.newPwd && (
+                      <motion.p initial={{ opacity:0,y:-5 }} animate={{ opacity:1,y:0 }} exit={{ opacity:0,y:-5 }}
+                        style={{ color:'#ef4444', fontSize:12, marginTop:4 }}>⚠ {errors.newPwd}</motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                <button type="submit" className="btn btn-primary w-full"
-                  disabled={loading} style={{ justifyContent:'center',padding:'14px',fontWeight:700,marginBottom:16 }}>
-                  {loading ? (
-                    <span style={{ display:'flex',alignItems:'center',gap:10 }}>
-                      <span style={{ width:16,height:16,border:'2px solid rgba(255,255,255,0.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin 0.7s linear infinite',display:'inline-block' }} />
-                      {t('resetting') || 'Resetting…'}
-                    </span>
-                  ) : `✓ ${t('resetPassword') || 'Reset Password'}`}
-                </button>
-
-                {/* Resend */}
-                <div style={{ textAlign:'center', fontSize:13, color:'var(--text-muted)' }}>
-                  {t('didNotReceiveCode') || "Didn't receive the code?"}{' '}
-                  {cooldown > 0 ? (
-                    <span>{t('resendIn') || 'Resend in'} {cooldown}s</span>
-                  ) : (
-                    <button type="button" onClick={resendOtp} disabled={resending}
-                      style={{ background:'none',border:'none',color:'var(--primary-light)',cursor:'pointer',fontSize:13,fontWeight:600 }}>
-                      {resending ? (t('sending') || 'Sending…') : (t('resendCode') || 'Resend Code')}
-                    </button>
-                  )}
+                {/* Confirm */}
+                <div className="form-group">
+                  <label className="form-label">🔐 {t('auth.confirmPassword')||'Confirm New Password'}</label>
+                  <input type="password" value={confirm}
+                    onChange={e=>{setConfirm(e.target.value);setErrors(p=>({...p,confirm:''}))}}
+                    placeholder="Repeat new password"
+                    className={`form-control${errors.confirm?' error':''}`}
+                    autoComplete="new-password"/>
+                  <AnimatePresence>
+                    {errors.confirm && (
+                      <motion.p initial={{ opacity:0,y:-5 }} animate={{ opacity:1,y:0 }} exit={{ opacity:0,y:-5 }}
+                        style={{ color:'#ef4444', fontSize:12, marginTop:4 }}>⚠ {errors.confirm}</motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
+
+                <SpinButton loading={loading} label={t('auth.resetPassword')||'Reset Password'} icon="🔐"/>
               </form>
-            </div>
-          </>
-        )}
+              <button onClick={()=>{setStep(0);setOtp('');setErrors({})}}
+                style={{ marginTop:16, background:'none', border:'none', color:'var(--text-muted)', fontSize:13, cursor:'pointer', width:'100%', textAlign:'center' }}>
+                {t('auth.backToLogin')||'← Back'}
+              </button>
+            </motion.div>
+          )}
 
-        {/* Step 3 — Success */}
-        {step === 3 && (
-          <div className="card" style={{ padding:48,textAlign:'center' }}>
-            <div style={{ fontSize:72,marginBottom:16 }}>✅</div>
-            <h2 className="gradient-text" style={{ fontSize:24,fontWeight:900,marginBottom:12 }}>
-              {t('passwordResetSuccess') || 'Password Reset!'}
-            </h2>
-            <p style={{ color:'var(--text-muted)',fontSize:14,marginBottom:28 }}>
-              {t('passwordResetSuccessDesc') || 'Your password has been reset successfully. You can now sign in with your new password.'}
-            </p>
-            <button className="btn btn-primary w-full" style={{ justifyContent:'center' }}
-              onClick={() => navigate('/login')}>
-              {t('goToLogin') || 'Go to Login →'}
-            </button>
-          </div>
-        )}
-      </div>
+          {step === 2 && (
+            <motion.div key="step2" className="glass-card" style={{ padding:'36px', textAlign:'center' }}
+              initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }} transition={{ type:'spring', stiffness:260, damping:20 }}>
+              <motion.div style={{ fontSize:72, marginBottom:16 }}
+                animate={{ scale:[0.5,1.2,1], rotate:[0,10,-10,0] }}
+                transition={{ duration:0.6 }}>
+                🎉
+              </motion.div>
+              <h2 style={{ fontWeight:800, fontSize:22, marginBottom:8 }}>
+                {t('auth.passwordResetSuccess')||'Password Reset Successfully!'}
+              </h2>
+              <p style={{ color:'var(--text-muted)', fontSize:14, marginBottom:28 }}>
+                You can now sign in with your new password.
+              </p>
+              <Link to="/login">
+                <motion.button className="btn-primary-full" whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }}>
+                  {t('goToLogin')||'Go to Login →'}
+                </motion.button>
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </div>
+  );
+}
+
+function SpinButton({ loading, label, icon='' }) {
+  return (
+    <motion.button type="submit" className="btn-primary-full" disabled={loading}
+      whileHover={!loading?{scale:1.02,y:-1}:{}} whileTap={!loading?{scale:0.98}:{}}>
+      {loading ? (
+        <span style={{ display:'flex', alignItems:'center', gap:10, justifyContent:'center' }}>
+          <motion.span style={{ width:18, height:18, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'#fff', borderRadius:'50%', display:'inline-block' }}
+            animate={{ rotate:360 }} transition={{ duration:0.7, repeat:Infinity, ease:'linear' }}/>
+          Processing…
+        </span>
+      ) : `${icon} ${label}`}
+    </motion.button>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import axiosInstance from '../../api/axiosInstance';
@@ -21,7 +22,7 @@ export default function CampaignDetails() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <><Navbar /><div className="spinner" style={{ marginTop:120 }} /></>;
+  if (loading) return <><Navbar /><div style={{ minHeight:'80vh', display:'flex', alignItems:'center', justifyContent:'center' }}><div className="spinner" /></div></>;
   if (!campaign) return null;
 
   const pct = campaign.progressPercent?.toFixed(1);
@@ -94,10 +95,12 @@ export default function CampaignDetails() {
                   <div style={{ fontSize:11, color:'var(--text-muted)' }}>{t('daysLeft') || 'Days Left'}</div>
                 </div>
               </div>
-              {user?.role === 'USER' ? (
+      {user?.role === 'USER' ? (
                 <Link to={`/user/donate/${campaign.campaignId}`}
                   className="btn btn-primary w-full" style={{ justifyContent:'center', fontSize:16 }}>
-                  {t('donateNow') || 'Donate Now'} 💜
+                  <motion.span whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }} style={{ display:'flex', alignItems:'center', gap:8, justifyContent:'center', width:'100%' }}>
+                    {t('donateNow') || 'Donate Now'} 💜
+                  </motion.span>
                 </Link>
               ) : user ? (
                 <div className="card" style={{ padding:16, textAlign:'center', background:'rgba(108,60,232,0.1)' }}>

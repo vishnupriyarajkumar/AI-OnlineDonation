@@ -33,7 +33,7 @@ public class CampaignController {
 
     @GetMapping("/campaigns/public/{id}")
     @Operation(summary = "Get campaign by ID (public)")
-    public ResponseEntity<ApiResponse<CampaignResponse>> publicCampaignById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<CampaignResponse>> publicCampaignById(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.ok(campaignService.getById(id)));
     }
 
@@ -48,14 +48,14 @@ public class CampaignController {
     @PutMapping("/admin/campaigns/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Approve a pending campaign")
-    public ResponseEntity<ApiResponse<CampaignResponse>> approve(@PathVariable Long id,
+    public ResponseEntity<ApiResponse<CampaignResponse>> approve(@PathVariable String id,
                                                                    @AuthenticationPrincipal UserDetails ud) {
         return ResponseEntity.ok(ApiResponse.ok("Campaign approved", campaignService.approve(id, ud.getUsername())));
     }
 
     @DeleteMapping("/admin/campaigns/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deleteCampaign(@PathVariable Long id,
+    public ResponseEntity<ApiResponse<Void>> deleteCampaign(@PathVariable String id,
                                                              @AuthenticationPrincipal UserDetails ud) {
         campaignService.delete(id, ud.getUsername());
         return ResponseEntity.ok(ApiResponse.ok("Campaign deleted", null));
@@ -72,7 +72,7 @@ public class CampaignController {
     @PutMapping("/admin/campaigns/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update campaign")
-    public ResponseEntity<ApiResponse<CampaignResponse>> update(@PathVariable Long id,
+    public ResponseEntity<ApiResponse<CampaignResponse>> update(@PathVariable String id,
                                                                   @Valid @RequestBody CampaignRequest req,
                                                                   @AuthenticationPrincipal UserDetails ud) {
         return ResponseEntity.ok(ApiResponse.ok("Campaign updated", campaignService.update(id, req, ud.getUsername())));

@@ -1,69 +1,73 @@
 import { useState, useRef, useEffect } from 'react';
-import { useLanguage, SUPPORTED_LANGUAGES } from '../context/LanguageContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '../context/LanguageContext';
 
-const LANG_FLAGS = { en:'🇬🇧', ta:'🇮🇳', hi:'🇮🇳', te:'🇮🇳', ml:'🇮🇳', kn:'🇮🇳' };
-const LANG_SHORT = { en:'EN', ta:'TA', hi:'HI', te:'TE', ml:'ML', kn:'KN' };
+const LANG_LIST = [
+  { code:'en', native:'English',   flag:'🇬🇧' },
+  { code:'ta', native:'தமிழ்',    flag:'🇮🇳' },
+  { code:'hi', native:'हिन्दी',   flag:'🇮🇳' },
+  { code:'te', native:'తెలుగు',   flag:'🇮🇳' },
+  { code:'ml', native:'മലയാളം',  flag:'🇮🇳' },
+  { code:'kn', native:'ಕನ್ನಡ',   flag:'🇮🇳' },
+];
 
-export default function LanguageSelector({ compact = false }) {
-  const { lang, changeLanguage, loading } = useLanguage();
+export default function LanguageSelector() {
+  const { lang, changeLanguage } = useLanguage();
   const [open, setOpen] = useState(false);
-  const ref  = useRef(null);
+  const ref = useRef(null);
+
+  const current = LANG_LIST.find(l => l.code === lang) || LANG_LIST[0];
 
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const select = (code) => { changeLanguage(code); setOpen(false); };
-
   return (
-    <div ref={ref} style={{ position:'relative' }}>
-      <button onClick={() => setOpen(p => !p)}
-        style={{
-          display:'flex', alignItems:'center', gap:6,
-          background:'rgba(255,255,255,0.07)', border:'1px solid var(--border)',
-          borderRadius:8, padding: compact ? '5px 10px' : '7px 14px',
-          cursor:'pointer', color:'var(--text)', fontSize:13, fontWeight:600,
-          transition:'all 0.2s',
-        }}
-        onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.12)'}
-        onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.07)'}
-        aria-label="Select language">
-        <span style={{ fontSize:16 }}>{loading ? '⏳' : LANG_FLAGS[lang]}</span>
-        {!compact && <span>{LANG_SHORT[lang]}</span>}
-        <span style={{ opacity:0.6, fontSize:10 }}>▼</span>
-      </button>
+    <div className="lang-selector" ref={ref}>
+      <motion.button
+        className="lang-btn"
+        onClick={() => setOpen(p => !p)}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.97 }}
+        aria-label="Select language"
+      >
+        <span>{current.flag}</span>
+        <span>{current.native}</span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}
+          style={{ fontSize: 10, opacity: 0.6 }}>▼</motion.span>
+      </motion.button>
 
-      {open && (
-        <div style={{
-          position:'absolute', top:'calc(100% + 6px)', right:0,
-          background:'var(--bg-card)', border:'1px solid var(--border)',
-          borderRadius:12, boxShadow:'0 8px 32px rgba(0,0,0,0.4)',
-          zIndex:9999, minWidth:200, overflow:'hidden',
-          animation:'fadeUp 0.15s ease',
-        }}>
-          <div style={{ padding:'10px 14px', fontSize:11, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid var(--border)' }}>
-            🌐 Select Language
-          </div>
-          {Object.entries(SUPPORTED_LANGUAGES).map(([code, name]) => (
-            <button key={code} onClick={() => select(code)}
-              style={{
-                display:'flex', alignItems:'center', gap:12, width:'100%',
-                padding:'10px 16px', background: lang===code ? 'rgba(108,60,232,0.15)' : 'transparent',
-                border:'none', cursor:'pointer', color: lang===code ? 'var(--primary-light)' : 'var(--text)',
-                fontSize:13, fontWeight: lang===code ? 700 : 400, textAlign:'left',
-                transition:'background 0.15s',
-              }}
-              onMouseEnter={e => { if (lang!==code) e.currentTarget.style.background='rgba(255,255,255,0.05)'; }}
-              onMouseLeave={e => { if (lang!==code) e.currentTarget.style.background='transparent'; }}>
-              <span style={{ fontSize:20 }}>{LANG_FLAGS[code]}</span>
-              <span style={{ flex:1 }}>{name}</span>
-              {lang===code && <span style={{ color:'var(--primary-light)' }}>✓</span>}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="lang-dropdown"
+            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            {LANG_LIST.map(l => (
+              <motion.div
+                key={l.code}
+                className={`lang-option ${lang === l.code ? 'active' : ''}`}
+                onClick={() => { changeLanguage(l.code); setOpen(false); }}
+                whileHover={{ x: 4 }}
+                transition={{ duration: 0.15 }}
+              >
+                <span style={{ fontSize: 18 }}>{l.flag}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: lang === l.code ? 700 : 500 }}>{l.native}</div>
+                </div>
+                {lang === l.code && (
+                  <span style={{ marginLeft: 'auto', color: 'var(--primary-light)', fontSize: 14 }}>✓</span>
+                )}
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

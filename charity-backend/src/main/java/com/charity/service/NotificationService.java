@@ -243,11 +243,18 @@ public class NotificationService {
 
     @Transactional
     public void markAllRead(User user) {
-        repo.markAllReadForUser(user);
+        List<Notification> unread = repo.findByUserAndReadFalseOrderByCreatedAtDesc(user);
+        unread.forEach(n -> n.setRead(true));
+        repo.saveAll(unread);
     }
 
     @Transactional
-    public void markOneRead(Long id, User user) {
-        repo.markOneRead(id, user);
+    public void markOneRead(String id, User user) {
+        repo.findById(id).ifPresent(n -> {
+            if (n.getUser().getUserId().equals(user.getUserId())) {
+                n.setRead(true);
+                repo.save(n);
+            }
+        });
     }
 }

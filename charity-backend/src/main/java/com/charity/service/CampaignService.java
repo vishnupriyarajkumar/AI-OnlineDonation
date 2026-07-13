@@ -41,7 +41,7 @@ public class CampaignService {
         return CampaignResponse.from(campaign);
     }
 
-    public CampaignResponse update(Long id, CampaignRequest req, String email) {
+    public CampaignResponse update(String id, CampaignRequest req, String email) {
         Campaign campaign = getCampaignOrThrow(id);
         User user = userRepository.findByEmail(email).orElseThrow();
 
@@ -59,7 +59,7 @@ public class CampaignService {
         return CampaignResponse.from(campaignRepository.save(campaign));
     }
 
-    public CampaignResponse approve(Long id, String adminEmail) {
+    public CampaignResponse approve(String id, String adminEmail) {
         Campaign campaign = getCampaignOrThrow(id);
         User admin = userRepository.findByEmail(adminEmail).orElseThrow();
 
@@ -72,7 +72,7 @@ public class CampaignService {
         return CampaignResponse.from(campaignRepository.save(campaign));
     }
 
-    public void delete(Long id, String email) {
+    public void delete(String id, String email) {
         Campaign campaign = getCampaignOrThrow(id);
         User user = userRepository.findByEmail(email).orElseThrow();
         auditLogService.log(user, "CAMPAIGN_DELETED", "Campaign", id, null, campaign.getCampaignName());
@@ -91,11 +91,11 @@ public class CampaignService {
     }
 
     @Transactional(readOnly = true)
-    public CampaignResponse getById(Long id) {
+    public CampaignResponse getById(String id) {
         return CampaignResponse.from(getCampaignOrThrow(id));
     }
 
-    public Campaign getCampaignOrThrow(Long id) {
+    public Campaign getCampaignOrThrow(String id) {
         return campaignRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Campaign not found: " + id));
     }

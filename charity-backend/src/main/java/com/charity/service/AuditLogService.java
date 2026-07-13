@@ -15,7 +15,7 @@ public class AuditLogService {
     private final AuditLogRepository auditLogRepository;
 
     @Async
-    public void log(User user, String action, String entityType, Long entityId, String ipAddress, String details) {
+    public void log(User user, String action, String entityType, String entityId, String ipAddress, String details) {
         AuditLog log = AuditLog.builder()
                 .user(user)
                 .action(action)
@@ -31,7 +31,7 @@ public class AuditLogService {
         return auditLogRepository.findAllByOrderByTimestampDesc(pageable);
     }
 
-    public Page<AuditLog> getUserLogs(Long userId, Pageable pageable) {
+    public Page<AuditLog> getUserLogs(String userId, Pageable pageable) {
         return auditLogRepository.findByUserUserIdOrderByTimestampDesc(userId, pageable);
     }
 }

@@ -57,7 +57,7 @@ public class OtpService {
         LocalDateTime now = LocalDateTime.now();
 
         otpRepo.deleteByUser(user);
-        otpRepo.flush();
+        // flush() not needed in MongoDB
 
         OtpVerification record = OtpVerification.builder()
                 .user(user).otpHash(hashedOtp)
@@ -99,7 +99,7 @@ public class OtpService {
 
         // Always delete existing OTP (even if verified) for password reset
         otpRepo.deleteByUser(user);
-        otpRepo.flush();
+        // flush() not needed in MongoDB
 
         OtpVerification otpRecord = OtpVerification.builder()
                 .user(user)
@@ -145,7 +145,7 @@ public class OtpService {
 
         // Upsert: delete old record for this user then create fresh one
         otpRepo.deleteByUser(user);
-        otpRepo.flush();
+        // flush() not needed in MongoDB
 
         OtpVerification otpRecord = OtpVerification.builder()
                 .user(user)

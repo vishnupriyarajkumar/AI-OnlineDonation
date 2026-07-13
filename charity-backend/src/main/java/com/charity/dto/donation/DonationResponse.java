@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DonationResponse {
-    private Long donationId;
+    private String donationId;
     private String campaignName;
     private String donorName;
     private String donorEmail;

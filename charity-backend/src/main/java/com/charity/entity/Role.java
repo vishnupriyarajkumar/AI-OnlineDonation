@@ -1,19 +1,18 @@
 package com.charity.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "roles")
+@Document(collection = "roles")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Role {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long roleId;
+    private String id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, unique = true)
+    @Indexed(unique = true)
     private RoleName roleName;
 
     public enum RoleName {

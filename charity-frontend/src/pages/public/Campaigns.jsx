@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import axiosInstance from '../../api/axiosInstance';
@@ -49,7 +50,7 @@ export default function Campaigns() {
       <Navbar />
       <div className="container" style={{ paddingTop:60, paddingBottom:80 }}>
         <div className="page-header text-center">
-          <h1>{t('all') || 'All'} <span className="gradient-text">{t('campaigns')}</span></h1>
+          <h1>All <span className="gradient-text">{t('nav.campaigns') || 'Campaigns'}</span></h1>
           <p>{t('chooseCause') || 'Choose a cause and make a difference today'}</p>
         </div>
         <div className="card" style={{ marginBottom:32, padding:20 }}>
@@ -74,18 +75,22 @@ export default function Campaigns() {
         {loading ? <div className="spinner" /> : (
           <>
             <p style={{ color:'var(--text-muted)', marginBottom:24, fontSize:14 }}>
-              {t('showing') || 'Showing'} {filtered.length} {t('of') || 'of'} {campaigns.length} {t('campaigns')}
+              {t('showing') || 'Showing'} {filtered.length} {t('ofLabel') || 'of'} {campaigns.length} campaigns
             </p>
             {filtered.length === 0 ? (
-              <div className="text-center card" style={{ padding:60 }}>
+              <motion.div className="text-center card" style={{ padding:60 }}
+                initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}>
                 <div style={{ fontSize:48, marginBottom:16 }}>🔍</div>
                 <h3>{t('noCampaignsFound') || 'No campaigns found'}</h3>
                 <p className="text-muted">{t('tryAdjust') || 'Try adjusting your search or filters'}</p>
-              </div>
+              </motion.div>
             ) : (
               <div className="grid-3">
-                {filtered.map(c => (
-                  <div key={c.campaignId} className="campaign-card">
+                {filtered.map((c, idx) => (
+                  <motion.div key={c.campaignId} className="campaign-card"
+                    initial={{ opacity:0, y:30 }} whileInView={{ opacity:1, y:0 }}
+                    viewport={{ once:true }} transition={{ duration:0.4, delay: idx * 0.06 }}
+                    whileHover={{ y:-6, transition:{ duration:0.2 } }}>
                     <img src={c.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600'}
                          alt={c.campaignName} loading="lazy" />
                     <div className="campaign-card-body">
@@ -117,7 +122,7 @@ export default function Campaigns() {
                       <Link to={`/campaigns/${c.campaignId}`} className="btn btn-primary w-full"
                         style={{ justifyContent:'center' }}>{t('viewAndDonate') || 'View & Donate'} 💜</Link>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}

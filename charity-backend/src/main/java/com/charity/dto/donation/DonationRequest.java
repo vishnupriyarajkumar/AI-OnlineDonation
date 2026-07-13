@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 public class DonationRequest {
 
     @NotNull(message = "Campaign ID required")
-    private Long campaignId;
+    private String campaignId;
 
     @NotNull(message = "Amount required")
     @DecimalMin(value = "10.0", message = "Minimum donation is ₹10")

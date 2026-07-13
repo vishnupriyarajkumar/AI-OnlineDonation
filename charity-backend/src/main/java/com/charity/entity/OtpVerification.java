@@ -1,61 +1,40 @@
 package com.charity.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
-/**
- * Stores one active OTP record per user.
- * Replaced on every new OTP request.
- */
-@Entity
-@Table(name = "otp_verification")
+@Document(collection = "otp_verifications")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class OtpVerification {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    /** The user this OTP belongs to. One record per user — upserted on each send. */
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @DBRef
+    @Indexed(unique = true)
     private User user;
 
-    /** BCrypt-hashed 6-digit code stored for secure comparison. */
-    @Column(nullable = false, length = 100)
     private String otpHash;
-
-    /** When this OTP expires (5 minutes from creation). */
-    @Column(nullable = false)
     private LocalDateTime expiryTime;
 
-    /** Number of incorrect verification attempts (max 3). */
-    @Column(nullable = false)
+    @Builder.Default
     private int attempts = 0;
 
-    /** True once the OTP has been successfully verified. */
-    @Column(nullable = false)
+    @Builder.Default
     private boolean verified = false;
 
-    /** Timestamp of the last OTP send — used to enforce 30-second resend cooldown. */
-    @Column(nullable = false)
     private LocalDateTime lastSentAt;
 
-    @CreationTimestamp
+    @CreatedDate
     private LocalDateTime createdAt;
 
-    public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiryTime);
-    }
-
-    public boolean isResendBlocked() {
-        return lastSentAt != null &&
-               LocalDateTime.now().isBefore(lastSentAt.plusSeconds(30));
-    }
-
+    public boolean isExpired()         { return LocalDateTime.now().isAfter(expiryTime); }
+    public boolean isResendBlocked()   { return lastSentAt != null && LocalDateTime.now().isBefore(lastSentAt.plusSeconds(30)); }
     public long secondsUntilResendAllowed() {
         if (lastSentAt == null) return 0;
         long diff = java.time.Duration.between(LocalDateTime.now(), lastSentAt.plusSeconds(30)).getSeconds();

@@ -1,30 +1,29 @@
 package com.charity.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "receipts")
+@Document(collection = "receipts")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Receipt {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long receiptId;
+    private String receiptId;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "donation_id", nullable = false, unique = true)
+    @DBRef
+    @Indexed(unique = true)
     private Donation donation;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Indexed(unique = true)
     private String receiptNumber;
 
-    @CreationTimestamp
+    @CreatedDate
     private LocalDateTime issuedAt;
 
-    @Column(length = 500)
     private String pdfUrl;
 }

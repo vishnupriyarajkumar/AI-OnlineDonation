@@ -1,38 +1,30 @@
 package com.charity.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "fund_allocations")
+@Document(collection = "fund_allocations")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class FundAllocation {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long allocationId;
+    private String allocationId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "campaign_id", nullable = false)
+    @DBRef
     private Campaign campaign;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "allocated_by", nullable = false)
+    @DBRef
     private User allocatedBy;
 
-    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
-
-    @Column(nullable = false, length = 255)
     private String purpose;
-
-    @Column(columnDefinition = "TEXT")
     private String description;
 
-    @CreationTimestamp
+    @CreatedDate
     private LocalDateTime allocatedAt;
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import axiosInstance from '../../api/axiosInstance';
 import { Sidebar } from './AdminSidebar';
 import toast from 'react-hot-toast';

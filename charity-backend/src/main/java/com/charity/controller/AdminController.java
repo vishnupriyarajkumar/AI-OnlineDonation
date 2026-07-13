@@ -49,7 +49,11 @@ public class AdminController {
         long totalUsers      = userRepository.count();
         long totalDonations  = donationRepository.count();
         long activeCampaigns = campaignRepository.countByStatus(Campaign.CampaignStatus.ACTIVE);
-        BigDecimal totalAmt  = donationRepository.sumSuccessfulDonations();
+        BigDecimal totalAmt  = donationRepository
+                .findByStatus(Donation.DonationStatus.SUCCESS)
+                .stream()
+                .map(Donation::getAmount)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
         // Login stats
         long recentLogins = 0;
@@ -111,7 +115,7 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}/toggle-lock")
-    public ResponseEntity<ApiResponse<String>> toggleLock(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> toggleLock(@PathVariable String id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setLocked(!user.getLocked());
@@ -126,7 +130,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/users/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable String id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         if (user.getRole().getRoleName() == Role.RoleName.ADMIN) {
@@ -137,7 +141,7 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}/toggle-enable")
-    public ResponseEntity<ApiResponse<String>> toggleEnable(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> toggleEnable(@PathVariable String id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setEnabled(!user.getEnabled());
@@ -152,7 +156,7 @@ public class AdminController {
 
     @GetMapping("/activities")
     public ResponseEntity<ApiResponse<Page<UserActivity>>> activities(
-            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String userId,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
@@ -257,7 +261,7 @@ public class AdminController {
     // ══════════════════════════════════════════════════════════
 
     @GetMapping("/users/{id}/activity")
-    public ResponseEntity<ApiResponse<List<LoginHistory>>> userActivity(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<List<LoginHistory>>> userActivity(@PathVariable String id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return ResponseEntity.ok(ApiResponse.ok(loginHistoryService.getUserHistory(user)));
@@ -285,7 +289,7 @@ public class AdminController {
 
     @GetMapping("/audit-logs/user/{userId}")
     public ResponseEntity<ApiResponse<Page<AuditLog>>> userAuditLogs(
-            @PathVariable Long userId,
+            @PathVariable String userId,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.ok(
@@ -300,7 +304,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> allocateFunds(
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserDetails ud) {
-        Long campaignId   = Long.valueOf(body.get("campaignId").toString());
+        String campaignId   = body.get("campaignId").toString();
         BigDecimal amount = new BigDecimal(body.get("amount").toString());
         String purpose    = body.get("purpose").toString();
         String desc       = body.containsKey("description") ? body.get("description").toString() : null;
@@ -329,7 +333,7 @@ public class AdminController {
 
     @GetMapping("/fund-allocations/{campaignId}")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getFundAllocations(
-            @PathVariable Long campaignId) {
+            @PathVariable String campaignId) {
         List<FundAllocation> allocations = fundAllocationRepository.findByCampaignCampaignId(campaignId);
         List<Map<String, Object>> result = allocations.stream().map(a -> {
             Map<String, Object> row = new java.util.LinkedHashMap<>();
@@ -371,7 +375,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/events/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteEvent(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> deleteEvent(@PathVariable String id) {
         eventRepository.deleteById(id);
         return ResponseEntity.ok(ApiResponse.ok("Event deleted", null));
     }

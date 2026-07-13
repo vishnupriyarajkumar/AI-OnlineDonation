@@ -61,7 +61,7 @@ public class SubscriptionService {
 
     public Subscription choosePlan(User user, DonorType type,
                                     BigDecimal monthlyAmount, int donationDay,
-                                    Long campaignId) {
+                                    String campaignId) {
         Subscription sub = getOrCreate(user);
         sub.setDonorType(type);
         sub.setFirstLoginDone(true);
@@ -81,7 +81,7 @@ public class SubscriptionService {
     // ── Upgrade existing GENERAL donor to MONTHLY ─────────────
 
     public Subscription upgrade(User user, BigDecimal monthlyAmount,
-                                 int donationDay, Long campaignId) {
+                                 int donationDay, String campaignId) {
         Subscription sub = getOrCreate(user);
         sub.setDonorType(DonorType.MONTHLY);
         sub.setStatus(SubscriptionStatus.ACTIVE);
@@ -196,7 +196,7 @@ public class SubscriptionService {
         m.put("totalGeneral",    subscriptionRepo.countByDonorType(DonorType.GENERAL));
 
         // Upcoming donations in next 7 days
-        long upcoming = subscriptionRepo.findAllActiveMonthly().stream()
+        long upcoming = subscriptionRepo.findByDonorTypeAndStatus(com.charity.entity.Subscription.DonorType.MONTHLY, com.charity.entity.Subscription.SubscriptionStatus.ACTIVE).stream()
                 .filter(s -> s.getNextDonationDate() != null &&
                         !s.getNextDonationDate().isAfter(LocalDate.now().plusDays(7)))
                 .count();
@@ -208,10 +208,16 @@ public class SubscriptionService {
 
     private Subscription getOrCreate(User user) {
         return subscriptionRepo.findByUser(user)
-                .orElseGet(() -> subscriptionRepo.save(Subscription.builder()
-                        .user(user).donorType(DonorType.GENERAL)
-                        .status(SubscriptionStatus.ACTIVE).firstLoginDone(false)
-                        .build()));
+                .orElseGet(() -> {
+                    // If user is already verified (existing/seeded user), mark first login done
+                    // to prevent unexpected onboarding redirect
+                    boolean alreadyDone = Boolean.TRUE.equals(user.getIsVerified());
+                    return subscriptionRepo.save(Subscription.builder()
+                            .user(user).donorType(DonorType.GENERAL)
+                            .status(SubscriptionStatus.ACTIVE)
+                            .firstLoginDone(alreadyDone)
+                            .build());
+                });
     }
 
     private void assertMonthly(Subscription sub) {
@@ -220,7 +226,7 @@ public class SubscriptionService {
     }
 
     private void applyMonthlySettings(Subscription sub, BigDecimal amount,
-                                       int day, Long campaignId) {
+                                       int day, String campaignId) {
         sub.setMonthlyAmount(amount);
         sub.setDonationDay(Math.max(1, Math.min(28, day)));
         sub.setNextDonationDate(sub.computeNextDonationDate());

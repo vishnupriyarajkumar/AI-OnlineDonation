@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import axiosInstance from '../../api/axiosInstance';
 import Navbar from '../../components/Navbar';
 import toast from 'react-hot-toast';
@@ -29,10 +30,11 @@ export default function MyDonations() {
   return (
     <div>
       <Navbar />
-      <div className="container" style={{ paddingTop:48, paddingBottom:80 }}>
+      <motion.div className="container" style={{ paddingTop:48, paddingBottom:80 }}
+        initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4 }}>
         <div className="page-header">
-          <h1>{t('myDonations')} <span className="gradient-text">{t('donations') || 'Donations'}</span></h1>
-          <p>{t('trackContributions') || 'Track all your contributions and download receipts'}</p>
+          <h1>My <span className="gradient-text">Donations</span></h1>
+          <p style={{ color:'var(--text-muted)' }}>Track all your contributions and download receipts</p>
         </div>
         <div className="grid-3" style={{ marginBottom:32 }}>
           {[
@@ -40,10 +42,12 @@ export default function MyDonations() {
             { icon:'✅', label: t('successful') || 'Successful', val: donations.filter(d=>d.status==='SUCCESS').length },
             { icon:'₹', label: t('totalContributed') || 'Total Contributed', val: `₹${total.toLocaleString('en-IN')}` },
           ].map((s,i) => (
-            <div key={i} className="stat-card">
+            <motion.div key={i} className="stat-card"
+              initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
+              transition={{ delay:i*0.1 }} whileHover={{ y:-4 }}>
               <div className="stat-icon" style={{ background:'rgba(108,60,232,0.15)', color:'var(--primary-light)', fontSize:20 }}>{s.icon}</div>
               <div><div className="stat-value">{s.val}</div><div className="stat-label">{s.label}</div></div>
-            </div>
+            </motion.div>
           ))}
         </div>
         {loading ? <div className="spinner" /> : donations.length === 0 ? (
@@ -84,7 +88,7 @@ export default function MyDonations() {
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

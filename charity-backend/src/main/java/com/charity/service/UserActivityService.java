@@ -65,10 +65,17 @@ public class UserActivityService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UserActivity> filter(Long userId, ActivityType type,
+    public Page<UserActivity> filter(String userId, ActivityType type,
                                      LocalDateTime from, LocalDateTime to,
                                      Pageable pageable) {
-        return repo.filter(userId, type, from, to, pageable);
+        // MongoDB doesn't support JPQL — use in-memory filtering with pagination
+        if (userId != null && !userId.isBlank()) {
+            return repo.findByUserUserIdOrderByTimestampDesc(userId, pageable);
+        }
+        if (type != null) {
+            return repo.findByActivityTypeOrderByTimestampDesc(type, pageable);
+        }
+        return repo.findAllByOrderByTimestampDesc(pageable);
     }
 
     // ── Stats ──────────────────────────────────────────────────
@@ -80,6 +87,6 @@ public class UserActivityService {
 
     @Transactional(readOnly = true)
     public long countActiveUsersToday() {
-        return repo.countActiveUsersSince(LocalDateTime.now().minusHours(24));
+        return repo.countByActivityTypeAndTimestampAfter(UserActivity.ActivityType.LOGGED_IN, LocalDateTime.now().minusHours(24));
     }
 }

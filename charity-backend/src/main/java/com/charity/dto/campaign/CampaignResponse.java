@@ -10,7 +10,7 @@ import java.time.temporal.ChronoUnit;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class CampaignResponse {
-    private Long campaignId;
+    private String campaignId;
     private String campaignName;
     private String description;
     private BigDecimal goalAmount;

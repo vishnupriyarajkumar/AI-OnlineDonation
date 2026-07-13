@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import axiosInstance from '../../api/axiosInstance';
 import Navbar from '../../components/Navbar';
 import toast from 'react-hot-toast';

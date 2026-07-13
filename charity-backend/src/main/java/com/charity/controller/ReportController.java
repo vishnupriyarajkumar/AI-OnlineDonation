@@ -27,7 +27,7 @@ public class ReportController {
 
     @GetMapping("/admin/reports/monthly")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<Object[]>>> monthlyReport(
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> monthlyReport(
             @RequestParam(defaultValue = "0") int year) {
         if (year == 0) year = LocalDate.now().getYear();
         return ResponseEntity.ok(ApiResponse.ok(reportService.getMonthlyDonations(year)));
@@ -35,7 +35,7 @@ public class ReportController {
 
     @GetMapping("/admin/reports/campaign/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> campaignReport(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> campaignReport(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.ok(reportService.getCampaignReport(id)));
     }
 }

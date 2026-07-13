@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { useLanguage, SUPPORTED_LANGUAGES } from '../../context/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import axiosInstance from '../../api/axiosInstance';
 import Navbar from '../../components/Navbar';
 import toast from 'react-hot-toast';
@@ -11,11 +12,12 @@ const PWD_REGEX  = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*
 
 export default function Profile() {
   const { user, login }        = useAuth();
-  const { lang, changeLanguage, t } = useLanguage();
+  const { lang, changeLanguage, t, LANGUAGES } = useLanguage();
 
   const [activeTab, setActiveTab]   = useState('details');
   const [editing,   setEditing]     = useState(false);
   const [saving,    setSaving]      = useState(false);
+  const [locating,  setLocating]    = useState(false); // auto-location state
   const [stats,     setStats]       = useState({ total:0, successful:0, amount:0 });
   const [sub,       setSub]         = useState(null);
   const [loginHist, setLoginHist]   = useState([]);
@@ -59,6 +61,64 @@ export default function Profile() {
   }, [activeTab]);
 
   const handle = e => setForm(p => ({...p, [e.target.name]: e.target.value}));
+
+  // ── Auto-detect location via Geolocation API + OpenStreetMap Nominatim ──
+  const autoDetectLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser.');
+      return;
+    }
+    setLocating(true);
+    toast('📍 Detecting your location…', { duration: 2000 });
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          // OpenStreetMap Nominatim — free, no API key needed
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1&email=newdawnfoundationtrust@gmail.com`,
+            { headers: { 'Accept-Language': lang === 'ta' ? 'ta' : lang === 'hi' ? 'hi' : 'en' } }
+          );
+          const data = await res.json();
+
+          if (data?.address) {
+            const a = data.address;
+            // Build a readable address from components
+            const parts = [
+              a.house_number,
+              a.road || a.neighbourhood || a.suburb,
+              a.city || a.town || a.village || a.county,
+              a.state_district || a.district,
+              a.state,
+              a.postcode,
+            ].filter(Boolean);
+
+            const address = parts.join(', ');
+            setForm(p => ({ ...p, address }));
+            toast.success('📍 Location detected!');
+          } else {
+            toast.error('Could not read address. Please enter manually.');
+          }
+        } catch {
+          toast.error('Location lookup failed. Please enter address manually.');
+        } finally {
+          setLocating(false);
+        }
+      },
+      (error) => {
+        setLocating(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          toast.error('Location access denied. Please allow location in browser settings.');
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          toast.error('Location unavailable. Please enter address manually.');
+        } else {
+          toast.error('Location timeout. Please try again.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   const save = async e => {
     e.preventDefault();
@@ -113,7 +173,13 @@ export default function Profile() {
   return (
     <div style={{ background:'var(--bg)', minHeight:'100vh' }}>
       <Navbar />
-      <div className="container" style={{ paddingTop:40, paddingBottom:80, maxWidth:900 }}>
+      <motion.div
+        className="container"
+        style={{ paddingTop:40, paddingBottom:80, maxWidth:900 }}
+        initial={{ opacity:0, y:20 }}
+        animate={{ opacity:1, y:0 }}
+        transition={{ duration:0.4 }}
+      >
         <div style={{ marginBottom:24 }}>
           <h1 style={{ fontSize:26, fontWeight:900 }}>My <span className="gradient-text">Profile</span></h1>
           <p style={{ color:'var(--text-muted)', marginTop:4 }}>Manage your account, security, language and history</p>
@@ -130,7 +196,9 @@ export default function Profile() {
             <div style={{ display:'flex', gap:8, marginTop:8, flexWrap:'wrap' }}>
               <span style={{ background:'rgba(16,185,129,0.12)',color:'#10b981',borderRadius:99,padding:'2px 10px',fontSize:11,fontWeight:700,border:'1px solid rgba(16,185,129,0.3)' }}>✅ Verified</span>
               <span style={{ background:'rgba(108,60,232,0.12)',color:'var(--primary-light)',borderRadius:99,padding:'2px 10px',fontSize:11,fontWeight:700,border:'1px solid rgba(108,60,232,0.3)' }}>👤 {user?.role}</span>
-              <span style={{ background:'rgba(255,255,255,0.06)',color:'var(--text-muted)',borderRadius:99,padding:'2px 10px',fontSize:11,fontWeight:700 }}>{LANG_FLAGS[lang]} {SUPPORTED_LANGUAGES[lang]}</span>
+              <span style={{ background:'rgba(255,255,255,0.06)',color:'var(--text-muted)',borderRadius:99,padding:'2px 10px',fontSize:11,fontWeight:700 }}>
+                {LANG_FLAGS[lang]} {LANGUAGES[lang]?.native || LANGUAGES[lang]?.name || lang.toUpperCase()}
+              </span>
             </div>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:8, textAlign:'right' }}>
@@ -143,12 +211,16 @@ export default function Profile() {
         {/* Tab nav */}
         <div style={{ display:'flex', gap:6, marginBottom:20, flexWrap:'wrap' }}>
           {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-              padding:'8px 16px', borderRadius:99, fontSize:12, fontWeight:600, border:'none', cursor:'pointer',
-              background: activeTab===tab.id ? 'linear-gradient(135deg,var(--primary),var(--primary-light))' : 'rgba(255,255,255,0.06)',
-              color: activeTab===tab.id ? '#fff' : 'var(--text-muted)',
-              boxShadow: activeTab===tab.id ? '0 4px 14px rgba(108,60,232,0.35)' : 'none',
-            }}>{tab.label}</button>
+            <motion.button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              whileHover={{ scale:1.04 }} whileTap={{ scale:0.97 }}
+              style={{
+                padding:'8px 16px', borderRadius:99, fontSize:12, fontWeight:600, border:'none', cursor:'pointer',
+                background: activeTab===tab.id ? 'linear-gradient(135deg,var(--primary),var(--primary-light))' : 'rgba(255,255,255,0.06)',
+                color: activeTab===tab.id ? '#fff' : 'var(--text-muted)',
+                boxShadow: activeTab===tab.id ? '0 4px 14px rgba(108,60,232,0.35)' : 'none',
+                transition: 'background 0.2s, color 0.2s',
+              }}>{tab.label}
+            </motion.button>
           ))}
         </div>
 
@@ -167,8 +239,47 @@ export default function Profile() {
                   {[['fullName','Full Name *'],['phone','Mobile'],['address','Address']].map(([n,l]) => (
                     <div key={n} className="form-group">
                       <label style={{ fontSize:12,color:'var(--text-muted)',marginBottom:4,display:'block' }}>{l}</label>
-                      <input className="form-control" name={n} value={form[n]} onChange={handle}
-                        required={n==='fullName'} placeholder={l} />
+                      {n === 'address' ? (
+                        <>
+                        <div style={{ position:'relative' }}>
+                          <input className="form-control" name={n} value={form[n]} onChange={handle}
+                            placeholder={locating ? '📍 Detecting location…' : 'Enter address or use location 📍'}
+                            style={{ paddingRight: 46 }}
+                            disabled={locating}
+                          />
+                          <button
+                            type="button"
+                            onClick={autoDetectLocation}
+                            disabled={locating}
+                            title="Auto-detect my location"
+                            style={{
+                              position:'absolute', right:8, top:'50%', transform:'translateY(-50%)',
+                              background: locating ? 'rgba(108,60,232,0.3)' : 'rgba(108,60,232,0.15)',
+                              border:'1px solid rgba(108,60,232,0.4)',
+                              borderRadius:8, padding:'4px 8px', cursor:'pointer',
+                              fontSize:16, lineHeight:1, transition:'all 0.2s',
+                              animation: locating ? 'locatePulse 1s ease infinite' : 'none',
+                            }}
+                            aria-label="Auto detect location"
+                          >
+                            {locating ? '⏳' : '📍'}
+                          </button>
+                        </div>
+                        <p style={{ fontSize:11, color:'var(--text-muted)', marginTop:4 }}>
+                          Click 📍 to auto-fill from your current location
+                        </p>
+
+                        <style>{`
+                          @keyframes locatePulse {
+                            0%,100%{box-shadow:0 0 0 0 rgba(108,60,232,0.5)}
+                            50%{box-shadow:0 0 0 6px rgba(108,60,232,0)}
+                          }
+                        `}</style>
+                        </>
+                      ) : (
+                        <input className="form-control" name={n} value={form[n]} onChange={handle}
+                          required={n==='fullName'} placeholder={l} />
+                      )}
                     </div>
                   ))}
                   <div style={{ display:'flex', gap:10 }}>
@@ -260,7 +371,7 @@ export default function Profile() {
               Your selected language is saved and applied automatically every time you log in.
             </p>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              {Object.entries(SUPPORTED_LANGUAGES).map(([code, name]) => (
+              {Object.entries(LANGUAGES).map(([code, info]) => (
                 <button key={code} onClick={() => changeLanguage(code)}
                   style={{
                     display:'flex', alignItems:'center', gap:12, padding:'14px 18px', borderRadius:12,
@@ -269,17 +380,17 @@ export default function Profile() {
                     cursor:'pointer', transition:'all 0.2s', textAlign:'left',
                     boxShadow: lang===code ? '0 0 20px rgba(108,60,232,0.2)' : 'none',
                   }}>
-                  <span style={{ fontSize:28 }}>{LANG_FLAGS[code]}</span>
+                  <span style={{ fontSize:28 }}>{info.flag}</span>
                   <div>
-                    <p style={{ fontWeight: lang===code ? 800 : 500, fontSize:14, color: lang===code ? 'var(--primary-light)' : 'var(--text)' }}>{name}</p>
-                    <p style={{ fontSize:11, color:'var(--text-muted)', marginTop:2 }}>{code.toUpperCase()}</p>
+                    <p style={{ fontWeight: lang===code ? 800 : 500, fontSize:14, color: lang===code ? 'var(--primary-light)' : 'var(--text)' }}>{info.native}</p>
+                    <p style={{ fontSize:11, color:'var(--text-muted)', marginTop:2 }}>{info.name}</p>
                   </div>
                   {lang===code && <span style={{ marginLeft:'auto',color:'var(--primary-light)',fontSize:18 }}>✓</span>}
                 </button>
               ))}
             </div>
             <div style={{ marginTop:20, padding:'12px 16px', background:'rgba(16,185,129,0.06)', border:'1px solid rgba(16,185,129,0.2)', borderRadius:8, fontSize:13, color:'var(--text-muted)' }}>
-              Current: <strong style={{ color:'var(--primary-light)' }}>{SUPPORTED_LANGUAGES[lang]}</strong> — All pages, notifications and emails will use this language.
+              Current: <strong style={{ color:'var(--primary-light)' }}>{LANGUAGES[lang]?.native}</strong> — All pages, notifications and emails will use this language.
             </div>
           </div>
         )}
@@ -405,7 +516,7 @@ export default function Profile() {
             )}
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

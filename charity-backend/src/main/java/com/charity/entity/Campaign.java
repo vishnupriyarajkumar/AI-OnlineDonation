@@ -1,71 +1,52 @@
 package com.charity.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "campaigns")
+@Document(collection = "campaigns")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Campaign {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long campaignId;
+    private String campaignId;
 
-    @Column(nullable = false, length = 255)
     private String campaignName;
-
-    @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
-
-    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal goalAmount;
 
-    @Column(precision = 15, scale = 2)
+    @Builder.Default
     private BigDecimal collectedAmount = BigDecimal.ZERO;
 
-    @Column(nullable = false)
     private LocalDate startDate;
-
-    @Column(nullable = false)
     private LocalDate endDate;
-
-    @Column(length = 500)
     private String imageUrl;
-
-    @Column(length = 100)
     private String category;
 
+    @Builder.Default
     private Integer beneficiaries = 0;
 
-    @Enumerated(EnumType.STRING)
+    @Builder.Default
     private UrgencyLevel urgencyLevel = UrgencyLevel.MEDIUM;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Builder.Default
     private CampaignStatus status = CampaignStatus.DRAFT;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
+    @DBRef
     private User createdBy;
 
-    @CreationTimestamp
+    @CreatedDate
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    public enum CampaignStatus {
-        DRAFT, ACTIVE, COMPLETED, CLOSED
-    }
-
-    public enum UrgencyLevel {
-        LOW, MEDIUM, HIGH, CRITICAL
-    }
+    public enum CampaignStatus { DRAFT, ACTIVE, COMPLETED, CLOSED }
+    public enum UrgencyLevel    { LOW, MEDIUM, HIGH, CRITICAL }
 }

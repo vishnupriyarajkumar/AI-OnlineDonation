@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend, BarChart, Bar,
+  ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
@@ -113,15 +114,17 @@ export default function AdminDashboard() {
 
           {/* Stat cards */}
           <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:28 }}>
-            {statCards.map(s => (
+            {statCards.map((s,i) => (
               <Link key={s.label} to={s.to} style={{ textDecoration:'none' }}>
-                <div className="stat-card" style={{ borderRadius:16 }}>
+                <motion.div className="stat-card" style={{ borderRadius:16 }}
+                  initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
+                  transition={{ delay:i*0.08 }} whileHover={{ y:-4, scale:1.02 }}>
                   <div className="stat-icon" style={{ background:s.bg,color:s.color,borderRadius:12 }}>{s.icon}</div>
                   <div>
                     <div className="stat-value" style={{ color:s.color,fontSize:24 }}>{s.value}</div>
                     <div className="stat-label">{s.label}</div>
                   </div>
-                </div>
+                </motion.div>
               </Link>
             ))}
           </div>

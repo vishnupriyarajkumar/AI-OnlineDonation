@@ -50,7 +50,7 @@ public class DonationService {
         return DonationResponse.from(donation);
     }
 
-    public DonationResponse confirmDonation(Long donationId, String transactionId) {
+    public DonationResponse confirmDonation(String donationId, String transactionId) {
         Donation donation = donationRepository.findById(donationId)
                 .orElseThrow(() -> new RuntimeException("Donation not found"));
 
@@ -63,9 +63,13 @@ public class DonationService {
         campaign.setCollectedAmount(campaign.getCollectedAmount().add(donation.getAmount()));
         campaignRepository.save(campaign);
 
-        // Generate receipt
-        String receiptNo = "RCP-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
-                + "-" + String.format("%06d", donationId);
+        // Generate receipt — use last 6 chars of MongoDB ObjectId
+        String shortId = donationId.length() >= 6
+                ? donationId.substring(donationId.length() - 6).toUpperCase()
+                : donationId.toUpperCase();
+        String receiptNo = "RCP-" + java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"))
+                + "-" + shortId;
         Receipt receipt = Receipt.builder()
                 .donation(donation)
                 .receiptNumber(receiptNo)
@@ -88,7 +92,7 @@ public class DonationService {
     @Transactional(readOnly = true)
     public List<DonationResponse> getMyDonations(String email) {
         User user = userRepository.findByEmail(email).orElseThrow();
-        return donationRepository.findByUserUserIdOrderByDonationDateDesc(user.getUserId())
+        return donationRepository.findByUserUserId(user.getUserId())
                 .stream().map(d -> {
                     DonationResponse r = DonationResponse.from(d);
                     receiptRepository.findByDonationDonationId(d.getDonationId())

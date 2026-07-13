@@ -39,7 +39,7 @@ public class RefreshTokenService {
     public RefreshToken create(User user, boolean rememberMe) {
         // Delete any existing token for this user (one token per user)
         repo.findByUser(user).ifPresent(repo::delete);
-        repo.flush();
+        // flush() not needed in MongoDB
 
         long days = rememberMe ? REMEMBER_DAYS : STANDARD_DAYS;
 

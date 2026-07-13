@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import axiosInstance from '../../api/axiosInstance';
 import toast from 'react-hot-toast';
 import { useLanguage } from '../../context/LanguageContext';
@@ -72,17 +73,22 @@ export default function SubscriptionOnboarding() {
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none',
         background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(108,60,232,0.25) 0%, transparent 60%)' }} />
 
-      <div style={{ width: '100%', maxWidth: 680, position: 'relative', zIndex: 1 }}>
+      <motion.div
+        style={{ width: '100%', maxWidth: 680, position: 'relative', zIndex: 1 }}
+        initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5 }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{ fontSize: 56, marginBottom: 12 }}>💜</div>
+        <motion.div style={{ textAlign: 'center', marginBottom: 36 }}
+          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.2 }}>
+          <motion.div style={{ fontSize: 56, marginBottom: 12 }}
+            animate={{ rotate:[0,-5,5,0], scale:[1,1.05,1] }}
+            transition={{ duration:3, repeat:Infinity, repeatDelay:2 }}>💜</motion.div>
           <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
             {t('welcomeTo') || 'Welcome to'} <span className="gradient-text">New Dawn Foundation Trust</span>
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>
             {t('howLikeToContribute') || 'How would you like to contribute? You can change this anytime.'}
           </p>
-        </div>
+        </motion.div>
 
         {step === 1 && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -220,7 +226,7 @@ export default function SubscriptionOnboarding() {
             {t('skipForNowDecideLater') || 'Skip for now — decide later'}
           </button>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

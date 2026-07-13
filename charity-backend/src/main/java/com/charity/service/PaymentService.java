@@ -31,7 +31,7 @@ public class PaymentService {
     @Value("${razorpay.key.secret}")
     private String keySecret;
 
-    public Map<String, Object> createOrder(Long donationId) throws Exception {
+    public Map<String, Object> createOrder(String donationId) throws Exception {
         Donation donation = donationRepository.findById(donationId)
                 .orElseThrow(() -> new RuntimeException("Donation not found"));
 
@@ -79,7 +79,7 @@ public class PaymentService {
     }
 
     public com.charity.dto.donation.DonationResponse verifyPayment(String orderId, String paymentId,
-                                                         String signature, Long donationId) throws Exception {
+                                                         String signature, String donationId) throws Exception {
         if (keySecret.contains("XXX")) {
             Transaction txn = transactionRepository.findByRazorpayOrderId(orderId)
                     .orElseThrow(() -> new RuntimeException("Transaction not found"));

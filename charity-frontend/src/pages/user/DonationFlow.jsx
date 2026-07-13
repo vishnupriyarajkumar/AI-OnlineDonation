@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import axiosInstance from '../../api/axiosInstance';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
@@ -89,7 +90,7 @@ export default function DonationFlow() {
     // ONLINE Razorpay flow
     try {
       const r = await axiosInstance.post('/api/user/donations', {
-        campaignId: Number(id),
+        campaignId: String(id),
         amount: Number(amount),
         paymentMethod: method,
         anonymous: anon,
@@ -252,13 +253,15 @@ export default function DonationFlow() {
   };
 
   if (!campaign) return (
-    <><Navbar /><div className="spinner" style={{ marginTop: 120 }} /></>
+    <><Navbar /><div style={{ minHeight:'80vh', display:'flex', alignItems:'center', justifyContent:'center' }}><div className="spinner"/></div></>
   );
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
       <Navbar />
-      <div className="container" style={{ paddingTop: 48, paddingBottom: 80, maxWidth: 680 }}>
+      <motion.div className="container"
+        style={{ paddingTop: 48, paddingBottom: 80, maxWidth: 680 }}
+        initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4 }}>
 
         {/* Progress steps */}
         {step < 3 && (
@@ -349,6 +352,15 @@ export default function DonationFlow() {
                 </button>
               ))}
             </div>
+
+            {method === 'UPI' && amount >= 10 && (
+              <div style={{ textAlign: 'center', marginBottom: 24, padding: 16, background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>{t('scanUpiQR') || 'Scan this QR code using any UPI app (GPay, PhonePe, Paytm)'}</p>
+                <div style={{ background: '#fff', padding: 12, display: 'inline-block', borderRadius: 12, border: '2px solid var(--primary-light)' }}>
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=newdawn@ybl&pn=NewDawnFoundation&am=${amount}&cu=INR`} alt="UPI QR Code" style={{ width: 150, height: 150 }} />
+                </div>
+              </div>
+            )}
 
             <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: 'var(--text-muted)' }}>
               🔒 {isOffline ? (t('demoModeNoRealCharge') || 'Demo mode — no real charge made') : (t('paymentsSecuredByRazorpay') || 'Payments secured by Razorpay. Card data never stored.')}
@@ -476,7 +488,7 @@ export default function DonationFlow() {
           </div>
         )}
 
-      </div>
+      </motion.div>
     </div>
   );
 }

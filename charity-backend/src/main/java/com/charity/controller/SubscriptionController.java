@@ -46,13 +46,13 @@ public class SubscriptionController {
 
         BigDecimal amount = null;
         int        day    = 1;
-        Long       campId = null;
+        String     campId = null;
 
         if (t == DonorType.MONTHLY) {
             amount = new BigDecimal(body.get("monthlyAmount").toString());
             day    = Integer.parseInt(body.get("donationDay").toString());
             if (body.containsKey("campaignId") && body.get("campaignId") != null)
-                campId = Long.valueOf(body.get("campaignId").toString());
+                campId = body.get("campaignId").toString();
         }
 
         subscriptionService.choosePlan(user, t, amount, day, campId);
@@ -68,8 +68,8 @@ public class SubscriptionController {
         User user   = resolve(ud);
         BigDecimal amount = new BigDecimal(body.get("monthlyAmount").toString());
         int        day    = Integer.parseInt(body.get("donationDay").toString());
-        Long       campId = body.containsKey("campaignId") && body.get("campaignId") != null
-                          ? Long.valueOf(body.get("campaignId").toString()) : null;
+        String     campId = body.containsKey("campaignId") && body.get("campaignId") != null
+                          ? body.get("campaignId").toString() : null;
 
         subscriptionService.upgrade(user, amount, day, campId);
         return ResponseEntity.ok(ApiResponse.ok("Upgraded to Monthly Giving!",

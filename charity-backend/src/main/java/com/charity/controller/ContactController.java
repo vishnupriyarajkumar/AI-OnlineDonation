@@ -40,8 +40,8 @@ public class ContactController {
         String message = str(body, "message");
         String phone   = str(body, "phone");
         String address = str(body, "address");
-        Long   userId  = body.get("userId") != null
-                       ? Long.valueOf(body.get("userId").toString()) : null;
+        String userId  = body.get("userId") != null
+                       ? body.get("userId").toString() : null;
 
         // If user is logged in, update their profile with phone/address
         if (userId != null) {
@@ -49,7 +49,6 @@ public class ContactController {
             optUser.ifPresent(user -> {
                 boolean changed = false;
                 if (phone != null && !phone.isBlank() && !phone.equals(user.getPhone())) {
-                    // Only set if not taken by another user
                     boolean taken = userRepository.findByPhone(phone)
                             .map(u -> !u.getUserId().equals(userId)).orElse(false);
                     if (!taken) { user.setPhone(phone); changed = true; }

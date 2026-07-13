@@ -1,301 +1,326 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axiosInstance from '../../api/axiosInstance';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/Navbar';
-import toast from 'react-hot-toast';
 import { useLanguage } from '../../context/LanguageContext';
+import axiosInstance from '../../api/axiosInstance';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import toast from 'react-hot-toast';
 
-const URGENCY_COLOR = { LOW:'#10b981', MEDIUM:'#f59e0b', HIGH:'#ef4444', CRITICAL:'#dc2626' };
-const CATS = ['All','Water','Education','Healthcare','Food','Environment'];
+/* ── Stat Card ─────────────────────────────────────── */
+function StatCard({ icon, label, value, color, delay, prefix='', suffix='' }) {
+  return (
+    <motion.div className="stat-card"
+      initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }}
+      transition={{ duration:0.5, delay }} whileHover={{ y:-4, scale:1.02 }}>
+      <div className="stat-icon" style={{ background:`${color}20`, border:`1px solid ${color}40` }}>
+        <span style={{ fontSize:22 }}>{icon}</span>
+      </div>
+      <div>
+        <div className="stat-value" style={{ color }}>{prefix}{value}{suffix}</div>
+        <div className="stat-label">{label}</div>
+      </div>
+    </motion.div>
+  );
+}
 
-const MOCK_CAMPAIGNS = [
-  { campaignId:1, campaignName:'Clean Water for Rural Villages', description:'Safe drinking water for 500 families.', category:'Water', urgencyLevel:'CRITICAL', collectedAmount:450000, goalAmount:500000, progressPercent:90, daysRemaining:5, beneficiaries:500, imageUrl:'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600' },
-  { campaignId:2, campaignName:'Education for Every Child', description:'School kits for 200 children.', category:'Education', urgencyLevel:'HIGH', collectedAmount:120000, goalAmount:300000, progressPercent:40, daysRemaining:15, beneficiaries:200, imageUrl:'https://images.unsplash.com/photo-1497486751825-1233686d5d80?w=600' },
-  { campaignId:3, campaignName:'Free Medical Camp for Elderly', description:'Free checkups for 300 seniors.', category:'Healthcare', urgencyLevel:'MEDIUM', collectedAmount:85000, goalAmount:100000, progressPercent:85, daysRemaining:8, beneficiaries:300, imageUrl:'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600' },
-  { campaignId:4, campaignName:'Flood Relief — Emergency Aid', description:'Emergency aid for 2500 families.', category:'Food', urgencyLevel:'CRITICAL', collectedAmount:750000, goalAmount:1000000, progressPercent:75, daysRemaining:3, beneficiaries:2500, imageUrl:'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=600' },
-  { campaignId:5, campaignName:'Plant a Million Trees', description:'Reforestation across Karnataka.', category:'Environment', urgencyLevel:'LOW', collectedAmount:60000, goalAmount:200000, progressPercent:30, daysRemaining:60, beneficiaries:10000, imageUrl:'https://images.unsplash.com/photo-1448375240586-882707db888b?w=600' },
-];
+/* ── Donation Row ─────────────────────────────────── */
+function DonationRow({ d, i }) {
+  const statusColors = { COMPLETED:'#10b981', PENDING:'#f59e0b', FAILED:'#ef4444' };
+  return (
+    <motion.tr initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }}
+      transition={{ delay: i * 0.06 }}>
+      <td style={{ fontWeight:600 }}>#{d.donationId}</td>
+      <td style={{ fontSize:12, color:'var(--text-muted)', maxWidth:160, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.campaignName}</td>
+      <td style={{ fontWeight:700, color:'#a78bfa' }}>₹{Number(d.amount).toLocaleString('en-IN')}</td>
+      <td><span className="badge" style={{ background:`${statusColors[d.status]||'#888'}22`, color:statusColors[d.status]||'#888', border:`1px solid ${statusColors[d.status]||'#888'}44` }}>{d.status}</span></td>
+      <td style={{ fontSize:12, color:'var(--text-muted)' }}>{d.donationDate ? new Date(d.donationDate).toLocaleDateString('en-IN') : '—'}</td>
+    </motion.tr>
+  );
+}
 
 export default function UserDashboard() {
   const { user } = useAuth();
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
-  const { t } = useLanguage();
 
-  const [tab,       setTab]       = useState('campaigns');
-  const [campaigns, setCampaigns] = useState([]);
-  const [filtered,  setFiltered]  = useState([]);
-  const [myDons,    setMyDons]    = useState([]);
-  const [sub,       setSub]       = useState(null);
-  const [search,    setSearch]    = useState('');
-  const [category,  setCategory]  = useState('All');
-  const [sortBy,    setSortBy]    = useState('urgent');
-  const [loading,   setLoading]   = useState(true);
+  const [donations,  setDonations]  = useState([]);
+  const [sub,        setSub]        = useState(null);
+  const [campaigns,  setCampaigns]  = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [greeting,   setGreeting]   = useState('');
+  const [profile,    setProfile]    = useState(null);
+
+  const firstName = user?.fullName?.split(' ')[0] || 'Friend';
+  const hour = new Date().getHours();
+
+  useEffect(() => {
+    const greetings = {
+      en: hour < 12 ? '🌅 Good morning' : hour < 17 ? '☀️ Good afternoon' : '🌙 Good evening',
+      ta: hour < 12 ? '🌅 காலை வணக்கம்' : hour < 17 ? '☀️ மதிய வணக்கம்' : '🌙 மாலை வணக்கம்',
+      hi: hour < 12 ? '🌅 सुप्रभात' : hour < 17 ? '☀️ नमस्कार' : '🌙 शुभ संध्या',
+      te: hour < 12 ? '🌅 శుభోదయం' : hour < 17 ? '☀️ నమస్కారం' : '🌙 శుభ సాయంత్రం',
+      ml: hour < 12 ? '🌅 സുപ്രഭാതം' : hour < 17 ? '☀️ നമസ്കാരം' : '🌙 ശുഭ സന്ധ്യ',
+      kn: hour < 12 ? '🌅 ಶುಭೋದಯ' : hour < 17 ? '☀️ ನಮಸ್ಕಾರ' : '🌙 ಶುಭ ಸಂಜೆ',
+    };
+    const g = greetings[lang] || greetings.en;
+    setGreeting(`${g}, ${firstName}!`);
+  }, [firstName, hour, lang]);
 
   useEffect(() => {
     Promise.all([
-      axiosInstance.get('/api/user/campaigns').catch(() => null),
-      axiosInstance.get('/api/user/donations/my').catch(() => null),
-      axiosInstance.get('/api/user/subscription').catch(() => null),
-    ]).then(([cR, dR, sR]) => {
-      const c = cR?.data?.data?.length ? cR.data.data : MOCK_CAMPAIGNS;
-      setCampaigns(c); setFiltered(c);
-      setMyDons(dR?.data?.data || []);
-      setSub(sR?.data?.data || null);
+      axiosInstance.get('/api/user/donations').catch(()=>({ data:{ data:[] } })),
+      axiosInstance.get('/api/user/subscription/status').catch(()=>({ data:{ data:null } })),
+      axiosInstance.get('/api/campaigns/public').catch(()=>({ data:{ data:[] } })),
+      axiosInstance.get('/api/user/profile').catch(()=>({ data:{ data:null } })),
+    ]).then(([d, s, c, p]) => {
+      setDonations(d.data?.data || []);
+      setSub(s.data?.data);
+      setCampaigns((c.data?.data || []).slice(0, 3));
+      setProfile(p.data?.data);
     }).finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    let list = [...campaigns];
-    if (search) list = list.filter(c =>
-      c.campaignName.toLowerCase().includes(search.toLowerCase()));
-    if (category !== 'All') list = list.filter(c => c.category === category);
-    const ORDER = { CRITICAL:0, HIGH:1, MEDIUM:2, LOW:3 };
-    if (sortBy==='urgent')   list.sort((a,b)=>ORDER[a.urgencyLevel]-ORDER[b.urgencyLevel]);
-    if (sortBy==='ending')   list.sort((a,b)=>a.daysRemaining-b.daysRemaining);
-    if (sortBy==='progress') list.sort((a,b)=>b.progressPercent-a.progressPercent);
-    setFiltered(list);
-  }, [search, category, sortBy, campaigns]);
-
-  const totalDonated = myDons.filter(d=>d.status==='SUCCESS').reduce((s,d)=>s+Number(d.amount||0),0);
-  const isMonthly    = sub?.donorType === 'MONTHLY';
+  const totalDonated   = donations.filter(d=>d.status==='COMPLETED').reduce((s,d)=>s+Number(d.amount||0),0);
+  const campaignsBacked = [...new Set(donations.filter(d=>d.status==='COMPLETED').map(d=>d.campaignId))].length;
 
   return (
-    <div style={{ background:'var(--bg)', minHeight:'100vh' }}>
+    <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
       <Navbar />
-      <div className="container" style={{ paddingTop:40, paddingBottom:80 }}>
 
-        {/* Welcome hero */}
-        <div style={{ borderRadius:20, marginBottom:28, padding:'28px 32px', position:'relative', overflow:'hidden', background:'linear-gradient(135deg,rgba(108,60,232,0.22) 0%,rgba(16,185,129,0.10) 100%)', border:'1px solid rgba(108,60,232,0.25)' }}>
-          <div style={{ position:'absolute',right:-40,top:-40,width:180,height:180,borderRadius:'50%',background:'rgba(108,60,232,0.08)',pointerEvents:'none' }} />
-          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:16 }}>
-            <div>
-              <p style={{ color:'var(--primary-light)',fontSize:12,fontWeight:600,marginBottom:4 }}>👋 WELCOME BACK</p>
-              <h1 style={{ fontWeight:900,fontSize:26,marginBottom:6 }}>{user?.fullName || 'Donor'} 💜</h1>
-              <p style={{ color:'var(--text-muted)',fontSize:13 }}>Your generosity changes lives every day.</p>
-            </div>
-            <div style={{ display:'flex',gap:10,flexWrap:'wrap' }}>
-              <Link to="/user/donations"   className="btn btn-secondary btn-sm">📋 {t('myDonations')}</Link>
-              <Link to="/user/profile"     className="btn btn-secondary btn-sm">👤 {t('profile')}</Link>
-              <Link to="/user/subscription" className="btn btn-secondary btn-sm">🔄 {t('myPlan') || 'My Plan'}</Link>
-            </div>
-          </div>
-          <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginTop:24 }}>
-            {[
-              {icon:'🎯',label: t('activeCampaigns'), value:campaigns.length},
-              {icon:'💰',label: t('totalDonated'),    value:'₹'+(totalDonated/1000).toFixed(1)+'K'},
-              {icon:'🏆',label: t('campaignsBacked'), value:new Set(myDons.map(d=>d.campaignName)).size},
-            ].map(s=>(
-              <div key={s.label} style={{ background:'rgba(255,255,255,0.06)',borderRadius:12,padding:'14px 18px',border:'1px solid rgba(255,255,255,0.08)' }}>
-                <p style={{ fontSize:20 }}>{s.icon}</p>
-                <p style={{ fontSize:22,fontWeight:800,marginTop:4 }}>{s.value}</p>
-                <p style={{ fontSize:12,color:'var(--text-muted)',marginTop:2 }}>{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div style={{ maxWidth:1240, margin:'0 auto', padding:'32px 24px' }}>
 
-        {/* Profile + Plan row */}
-        <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:24 }}>
-
-          {/* Personal details card */}
-          <div className="card" style={{ padding:24 }}>
-            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}>
-              <h3 style={{ fontWeight:700,fontSize:16 }}>👤 {t('myDetails')}</h3>
-              <Link to="/user/profile" style={{ fontSize:12,color:'var(--primary-light)' }}>{t('edit')} →</Link>
-            </div>
-            <div style={{ display:'flex',alignItems:'center',gap:14,marginBottom:16 }}>
-              <div style={{ width:48,height:48,borderRadius:'50%',background:'linear-gradient(135deg,#6c3ce8,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:800,color:'#fff',flexShrink:0 }}>
-                {(user?.fullName||user?.email||'?')[0]?.toUpperCase()}
-              </div>
-              <div>
-                <p style={{ fontWeight:700,fontSize:15 }}>{user?.fullName||'—'}</p>
-                <p style={{ color:'var(--text-muted)',fontSize:12,marginTop:2 }}>{user?.email||user?.phone||'—'}</p>
-              </div>
-            </div>
-            {[
-              [t('userId') || 'User ID',  '#'+(user?.userId||'—')],
-              [t('mobile') || 'Mobile',   user?.phone||t('notSet') || 'Not set'],
-              [t('role') || 'Role',     user?.role||'USER'],
-              [t('status'),   '✅ '+t('verified')],
-            ].map(([k,v])=>(
-              <div key={k} style={{ display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,0.05)',fontSize:13 }}>
-                <span style={{ color:'var(--text-muted)' }}>{k}</span>
-                <span style={{ fontWeight:600 }}>{v}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Subscription plan card */}
-          <div className="card" style={{ padding:24, background: isMonthly ? 'rgba(108,60,232,0.06)' : 'var(--bg-glass)', border: isMonthly ? '1px solid rgba(108,60,232,0.3)' : '1px solid var(--border)' }}>
-            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}>
-              <h3 style={{ fontWeight:700,fontSize:16 }}>{isMonthly ? '🔄 Monthly Plan' : '🎁 General Donor'}</h3>
-              <Link to="/user/subscription" style={{ fontSize:12,color:'var(--primary-light)' }}>Manage →</Link>
-            </div>
-            {isMonthly ? (
-              <>
-                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14 }}>
-                  {[
-                    ['Amount',       '₹'+Number(sub.monthlyAmount||0).toLocaleString('en-IN')+'/mo'],
-                    ['Day',          'Day '+sub.donationDay],
-                    ['Status',       sub.status],
-                    ['Next Date',    sub.nextDonationDate||'—'],
-                  ].map(([k,v])=>(
-                    <div key={k} style={{ background:'rgba(255,255,255,0.04)',borderRadius:8,padding:'10px 12px' }}>
-                      <p style={{ fontSize:11,color:'var(--text-muted)',marginBottom:3 }}>{k}</p>
-                      <p style={{ fontWeight:700,fontSize:13 }}>{v}</p>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display:'flex',gap:8 }}>
-                  {sub.status==='ACTIVE' && <button className="btn btn-secondary btn-sm" onClick={()=>axiosInstance.post('/api/user/subscription/pause').then(()=>{toast.success('Paused');setSub(p=>({...p,status:'PAUSED'}))})}>⏸ Pause</button>}
-                  {sub.status==='PAUSED' && <button className="btn btn-secondary btn-sm" onClick={()=>axiosInstance.post('/api/user/subscription/resume').then(()=>{toast.success('Resumed');setSub(p=>({...p,status:'ACTIVE'}))})}>▶️ Resume</button>}
-                  <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm('Cancel subscription?'))axiosInstance.post('/api/user/subscription/cancel').then(()=>{toast.success('Cancelled');setSub(p=>({...p,donorType:'GENERAL',status:'CANCELLED'}))}).catch(()=>toast.error('Failed'))}}>❌ Cancel</button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p style={{ color:'var(--text-muted)',fontSize:13,lineHeight:1.7,marginBottom:16 }}>
-                  {t('upgradeMonthlyDesc') || 'Upgrade to Monthly Giving for automated donations, pre-donation reminders, and monthly receipts.'}
-                </p>
-                <div style={{ display:'flex',flexDirection:'column',gap:6,marginBottom:16 }}>
-                  {['🔄 Automatic monthly donations','⏰ Pre-donation reminders','📋 Monthly tax receipts','⏸ Pause or cancel anytime'].map(f=>(
-                    <p key={f} style={{ fontSize:12,color:'var(--text-muted)' }}>{f}</p>
-                  ))}
-                </div>
-                <Link to="/user/subscription" className="btn btn-primary w-full" style={{ justifyContent:'center' }}>🚀 {t('upgradeMonthly')}</Link>
-              </>
+        {/* ── Welcome Banner ─────────────────────────────── */}
+        <motion.div
+          style={{ background:'linear-gradient(135deg,rgba(124,58,237,0.2),rgba(16,185,129,0.1))', border:'1px solid rgba(167,139,250,0.2)', borderRadius:20, padding:'28px 32px', marginBottom:32, position:'relative', overflow:'hidden' }}
+          initial={{ opacity:0, y:-20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5 }}>
+          <motion.div
+            style={{ position:'absolute', right:-20, top:-20, fontSize:100, opacity:0.06, pointerEvents:'none' }}
+            animate={{ rotate:[0,10,-10,0] }} transition={{ duration:8, repeat:Infinity }}>
+            💜
+          </motion.div>
+          <div style={{ position:'relative', zIndex:1 }}>
+            <motion.h1 style={{ fontSize:28, fontWeight:900, marginBottom:6 }}
+              initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.2 }}>
+              {greeting}
+            </motion.h1>
+            <motion.p style={{ color:'var(--text-muted)', fontSize:15 }}
+              initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.3 }}>
+              {donations.length > 0
+                ? (t('dashboard.donationsMade')||`You've made {n} donation(s) so far. Thank you! 💜`).replace('{n}', donations.filter(d=>d.status==='COMPLETED').length)
+                : t('dashboard.noDonationsMsg')||'Start your giving journey today — browse campaigns and make your first donation! 🎯'}
+            </motion.p>
+            {donations.length === 0 && (
+              <motion.div style={{ marginTop:16 }} initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.4 }}>
+                <Link to="/campaigns">
+                  <motion.button className="btn-primary-full"
+                    style={{ width:'auto', padding:'10px 28px' }}
+                    whileHover={{ scale:1.04 }} whileTap={{ scale:0.97 }}>
+                    {t('browseCampaigns')||'Browse Campaigns'} 🚀
+                  </motion.button>
+                </Link>
+              </motion.div>
             )}
           </div>
+        </motion.div>
+
+        {/* ── Stats ──────────────────────────────────────── */}
+        <div className="grid-4" style={{ marginBottom:32 }}>
+          <StatCard icon="💰" label={t('totalDonated')||'Total Donated'}      value={`₹${totalDonated.toLocaleString('en-IN')}`} color="#a78bfa" delay={0}   />
+          <StatCard icon="🎯" label={t('campaignsBacked')||'Campaigns Backed'} value={campaignsBacked}  color="#34d399" delay={0.1} />
+          <StatCard icon="📋" label={t('totalTransactions')||'Total Transactions'} value={donations.length} color="#60a5fa" delay={0.2} />
+          <StatCard icon="📅" label={t('myPlan')||'Plan'}
+            value={sub?.donorType==='MONTHLY' ? `⭐ ${t('sub.monthlyGiving')||'Monthly'}` : `🎁 ${t('sub.generalDonor')||'General'}`}
+            color="#fbbf24" delay={0.3} />
         </div>
 
-        {/* Tab switcher */}
-        <div style={{ display:'flex',gap:10,marginBottom:20 }}>
-          {[['campaigns',`🎯 ${t('campaigns')}`],['history',`📋 ${t('myDonations')}`]].map(([tabId,l])=>(
-            <button key={tabId} onClick={()=>setTab(tabId)} style={{
-              padding:'8px 20px',borderRadius:99,fontSize:13,fontWeight:600,border:'none',cursor:'pointer',
-              background:tab===tabId?'linear-gradient(135deg,var(--primary),var(--primary-light))':'rgba(255,255,255,0.06)',
-              color:tab===tabId?'#fff':'var(--text-muted)',
-              boxShadow:tab===tabId?'0 4px 14px rgba(108,60,232,0.35)':'none',
-            }}>{l}</button>
-          ))}
-        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:24 }}>
 
-        {/* Campaigns tab */}
-        {tab==='campaigns' && (<>
-          <div className="card" style={{ marginBottom:20,padding:18 }}>
-            <div style={{ display:'grid',gridTemplateColumns:'1fr auto auto',gap:12,marginBottom:12,alignItems:'center' }}>
-              <div style={{ position:'relative' }}>
-                <span style={{ position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',opacity:0.4 }}>🔍</span>
-                <input className="form-control" placeholder="Search campaigns…" value={search}
-                  onChange={e=>setSearch(e.target.value)} style={{ paddingLeft:40 }} />
+          {/* ── Recent Donations ───────────────────────── */}
+          <motion.div className="glass-card" style={{ padding:0, overflow:'hidden' }}
+            initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
+            <div style={{ padding:'20px 24px', borderBottom:'1px solid rgba(167,139,250,0.1)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <h2 style={{ fontWeight:700, fontSize:16 }}>📋 {t('dashboard.recentDonations')||'Recent Donations'}</h2>
+              <Link to="/user/donations">
+                <span style={{ fontSize:12, color:'var(--primary-light)', cursor:'pointer' }}>{t('common.viewAll')||'View all'} →</span>
+              </Link>
+            </div>
+            {loading ? (
+              <div style={{ padding:24 }}>
+                {[0,1,2].map(i=><div key={i} className="skeleton" style={{ height:44, borderRadius:8, marginBottom:10 }}/>)}
               </div>
-              <select className="form-control" value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ width:160 }}>
-                <option value="urgent">{t('mostUrgent')}</option>
-                <option value="ending">{t('endingSoon')}</option>
-                <option value="progress">{t('nearGoal')}</option>
-              </select>
-              <button className="btn btn-secondary btn-sm" onClick={()=>{setSearch('');setCategory('All');setSortBy('urgent');}}>{t('clear') || 'Clear'}</button>
-            </div>
-            <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
-              {CATS.map(c=>(
-                <button key={c} onClick={()=>setCategory(c)} style={{
-                  padding:'5px 14px',borderRadius:99,fontSize:12,fontWeight:600,border:'none',cursor:'pointer',
-                  background:category===c?'linear-gradient(135deg,var(--primary),var(--primary-light))':'rgba(255,255,255,0.06)',
-                  color:category===c?'#fff':'var(--text-muted)',
-                }}>{c}</button>
-              ))}
-            </div>
-          </div>
-
-          {loading ? <div className="spinner"/> : (
-            <div className="grid-3">
-              {filtered.map(c=>{
-                const pct = c.goalAmount>0 ? Math.min(100,(Number(c.collectedAmount)/Number(c.goalAmount))*100) : (c.progressPercent||0);
-                return (
-                  <div key={c.campaignId} className="campaign-card" style={{ borderRadius:16 }}>
-                    <div style={{ position:'relative' }}>
-                      <img src={c.imageUrl||'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600'}
-                        alt={c.campaignName} loading="lazy"
-                        style={{ width:'100%',height:180,objectFit:'cover' }} />
-                      <div style={{ position:'absolute',top:10,right:10,background:URGENCY_COLOR[c.urgencyLevel]+'22',border:`1px solid ${URGENCY_COLOR[c.urgencyLevel]}44`,borderRadius:99,padding:'3px 10px',fontSize:11,fontWeight:700,color:URGENCY_COLOR[c.urgencyLevel],backdropFilter:'blur(8px)' }}>
-                        {c.urgencyLevel==='CRITICAL'?'🔥':c.urgencyLevel==='HIGH'?'⚡':c.urgencyLevel==='MEDIUM'?'📌':'🌱'} {c.urgencyLevel}
-                      </div>
-                      {(c.daysRemaining<=7) && <div style={{ position:'absolute',top:10,left:10,background:'rgba(239,68,68,0.85)',borderRadius:99,padding:'3px 10px',fontSize:11,fontWeight:700,color:'#fff' }}>⏰ {c.daysRemaining}d left</div>}
-                    </div>
-                    <div className="campaign-card-body">
-                      <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:8 }}>
-                        <span style={{ background:'rgba(108,60,232,0.15)',color:'var(--primary-light)',borderRadius:99,padding:'2px 10px',fontSize:11,fontWeight:700 }}>{c.category}</span>
-                        <span style={{ fontSize:11,color:'var(--text-muted)',marginLeft:'auto' }}>👥 {Number(c.beneficiaries||0).toLocaleString('en-IN')}</span>
-                      </div>
-                      <h3 style={{ fontSize:15,fontWeight:700,marginBottom:6,lineHeight:1.4 }}>{c.campaignName}</h3>
-                      <p style={{ fontSize:12,color:'var(--text-muted)',lineHeight:1.6,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden' }}>{c.description}</p>
-                      <div style={{ marginTop:14 }}>
-                        <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:5 }}>
-                          <span style={{ color:'var(--text-muted)' }}>₹{Number(c.collectedAmount||0).toLocaleString('en-IN')}</span>
-                          <span style={{ color:'#10b981',fontWeight:700 }}>{pct.toFixed(0)}%</span>
-                        </div>
-                        <div style={{ height:5,background:'rgba(255,255,255,0.08)',borderRadius:99,overflow:'hidden' }}>
-                          <div style={{ height:'100%',borderRadius:99,width:`${pct}%`,background:pct>=80?'linear-gradient(90deg,#10b981,#34d399)':'linear-gradient(90deg,var(--primary),var(--primary-light))' }} />
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ padding:'12px 18px',borderTop:'1px solid var(--border)',display:'flex',gap:8 }}>
-                      <Link to={`/campaigns/${c.campaignId}`} className="btn btn-secondary btn-sm" style={{ flex:1,justifyContent:'center' }}>{t('details')}</Link>
-                      <Link to={`/user/donate/${c.campaignId}`} className="btn btn-primary btn-sm" style={{ flex:2,justifyContent:'center' }}>{t('donateNow')} 💜</Link>
-                    </div>
-                  </div>
-                );
-              })}
-              {filtered.length===0 && (
-                <div className="card text-center" style={{ padding:60,gridColumn:'1/-1' }}>
-                  <div style={{ fontSize:48,marginBottom:16 }}>🔍</div>
-                  <h3>No campaigns match</h3>
-                </div>
-              )}
-            </div>
-          )}
-        </>)}
-
-        {/* Donations history tab */}
-        {tab==='history' && (
-          myDons.length===0 ? (
-            <div className="card text-center" style={{ padding:60 }}>
-              <div style={{ fontSize:48,marginBottom:16 }}>💜</div>
-              <h3>No donations yet</h3>
-              <p style={{ color:'var(--text-muted)',marginTop:8 }}>Start making a difference today!</p>
-              <button className="btn btn-primary" style={{ marginTop:20 }} onClick={()=>setTab('campaigns')}>Browse Campaigns</button>
-            </div>
-          ) : (
-            <div className="card" style={{ padding:0 }}>
+            ) : donations.length === 0 ? (
+              <div style={{ padding:40, textAlign:'center' }}>
+                <div style={{ fontSize:48, marginBottom:12 }}>💜</div>
+                <p style={{ color:'var(--text-muted)', marginBottom:16 }}>{t('dashboard.noDonationsYet')||'No donations yet — make your first one!'}</p>
+                <Link to="/campaigns">
+                  <button className="btn btn-primary btn-sm">{t('browseCampaigns')||'Browse Campaigns'} →</button>
+                </Link>
+              </div>
+            ) : (
               <div className="table-wrapper">
                 <table>
-                  <thead><tr><th>{t('campaign')}</th><th>{t('amount')}</th><th>{t('method')}</th><th>{t('date')}</th><th>{t('status')}</th><th>{t('receipt')}</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>#ID</th>
+                      <th>{t('common.campaign')||'Campaign'}</th>
+                      <th>{t('common.amount')||'Amount'}</th>
+                      <th>{t('common.status')||'Status'}</th>
+                      <th>{t('common.date')||'Date'}</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {myDons.map((d,i)=>(
-                      <tr key={i}>
-                        <td style={{ fontWeight:600,fontSize:13 }}>{d.campaignName||'—'}</td>
-                        <td style={{ color:'#10b981',fontWeight:700 }}>₹{Number(d.amount).toLocaleString('en-IN')}</td>
-                        <td style={{ fontSize:12,color:'var(--text-muted)' }}>{d.paymentMethod?.replace(/_/g,' ')||'—'}</td>
-                        <td style={{ fontSize:12,color:'var(--text-muted)' }}>{d.donationDate?new Date(d.donationDate).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—'}</td>
-                        <td>
-                          <span style={{ borderRadius:99,padding:'3px 10px',fontSize:11,fontWeight:700,
-                            background:d.status==='SUCCESS'?'rgba(16,185,129,0.12)':'rgba(245,158,11,0.12)',
-                            color:d.status==='SUCCESS'?'#10b981':'#f59e0b' }}>
-                            {d.status==='SUCCESS'?'✅ Success':'⏳ '+d.status}
-                          </span>
-                        </td>
-                        <td style={{ fontSize:12,color:'var(--primary-light)',fontFamily:'monospace' }}>{d.receiptNumber||'—'}</td>
-                      </tr>
-                    ))}
+                    {donations.slice(0,8).map((d,i)=><DonationRow key={d.donationId} d={d} i={i}/>)}
                   </tbody>
                 </table>
               </div>
-            </div>
-          )
-        )}
+            )}
+          </motion.div>
 
+          {/* ── Right Panel ────────────────────────────── */}
+          <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+
+            {/* Profile card */}
+            <motion.div className="glass-card" style={{ padding:24 }}
+              initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.25 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:16 }}>
+                <div style={{ width:52, height:52, borderRadius:'50%', background:'linear-gradient(135deg,var(--primary),var(--primary-light))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, fontWeight:800, color:'#fff', flexShrink:0 }}>
+                  {firstName[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight:700 }}>{profile?.fullName || user?.fullName}</div>
+                  <div style={{ fontSize:12, color:'var(--text-muted)' }}>{profile?.email || user?.email}</div>
+                </div>
+              </div>
+              {/* Extra user details */}
+              <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:14, fontSize:12 }}>
+                {(profile?.phone || user?.phone) && (
+                  <div style={{ display:'flex', gap:8, color:'var(--text-muted)' }}>
+                    <span>📱</span><span>{profile?.phone || user?.phone}</span>
+                  </div>
+                )}
+                {(profile?.address) && (
+                  <div style={{ display:'flex', gap:8, color:'var(--text-muted)', wordBreak:'break-word' }}>
+                    <span>📍</span><span>{profile.address}</span>
+                  </div>
+                )}
+                <div style={{ display:'flex', gap:8, color:'var(--text-muted)' }}>
+                  <span>🌐</span><span style={{ textTransform:'uppercase' }}>{profile?.preferredLanguage || user?.preferredLanguage || 'en'}</span>
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+                <span className="badge badge-active" style={{ fontSize:10 }}>✅ {t('verifiedLabel')||'Verified'}</span>
+                <span className="badge badge-purple" style={{ fontSize:10 }}>💜 {t('nav.dashboard')||'Donor'}</span>
+              </div>
+              <Link to="/user/profile" style={{ display:'block' }}>
+                <motion.button className="btn-secondary-full" style={{ padding:'9px' }} whileHover={{ scale:1.02 }}>
+                  {t('editProfile')||'Edit Profile'} →
+                </motion.button>
+              </Link>
+            </motion.div>
+
+            {/* Subscription card */}
+            <motion.div className="glass-card" style={{ padding:24 }}
+              initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.35 }}>
+              <h3 style={{ fontWeight:700, fontSize:14, marginBottom:16 }}>📅 {t('sub.title')||'Subscription Plan'}</h3>
+              {sub?.donorType === 'MONTHLY' ? (
+                <>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8, fontSize:13 }}>
+                    <span style={{ color:'var(--text-muted)' }}>{t('myPlan')||'Plan'}</span>
+                    <span style={{ fontWeight:700, color:'#fbbf24' }}>⭐ {t('sub.monthlyGiving')||'Monthly Giving'}</span>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8, fontSize:13 }}>
+                    <span style={{ color:'var(--text-muted)' }}>{t('sub.amount')||'Amount'}</span>
+                    <span style={{ fontWeight:700, color:'#a78bfa' }}>₹{sub.monthlyAmount}/mo</span>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16, fontSize:13 }}>
+                    <span style={{ color:'var(--text-muted)' }}>{t('common.status')||'Status'}</span>
+                    <span className="badge badge-active" style={{ fontSize:11 }}>{sub.status}</span>
+                  </div>
+                </>
+              ) : (
+                <div style={{ marginBottom:16 }}>
+                  <p style={{ fontSize:13, color:'var(--text-muted)', marginBottom:12, lineHeight:1.6 }}>
+                    {t('upgradeMonthlyDesc')||'Upgrade to Monthly Giving for automated donations, reminders & receipts.'}
+                  </p>
+                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    {[
+                      t('sub.automated')||'✅ Automated monthly donations',
+                      t('sub.reminders')||'📧 Pre-donation reminders',
+                      t('sub.receipts')||'🧾 Monthly tax receipts',
+                      t('sub.control')||'⏸ Pause or cancel anytime',
+                    ].map((f,i)=>(
+                      <div key={i} style={{ fontSize:12, color:'var(--text-muted)', display:'flex', gap:6 }}>{f}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Link to="/user/subscription">
+                <motion.button className="btn-primary-full" style={{ padding:'9px', fontSize:13 }} whileHover={{ scale:1.02 }}>
+                  {sub?.donorType==='MONTHLY' ? t('sub.managePlan')||'Manage Plan →' : t('upgradeMonthly')||'Upgrade to Monthly 🚀'}
+                </motion.button>
+              </Link>
+            </motion.div>
+
+            {/* Quick donate */}
+            <motion.div className="glass-card" style={{ padding:24 }}
+              initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.45 }}>
+              <h3 style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>⚡ {t('dashboard.quickActions')||'Quick Actions'}</h3>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {[
+                  { icon:'💜', label: t('btn.donateNow')||'Donate Now',         to:'/campaigns' },
+                  { icon:'📋', label: t('myDonations')||'All My Donations',     to:'/user/donations' },
+                  { icon:'👤', label: t('editProfile')||'Edit Profile',          to:'/user/profile' },
+                  { icon:'📬', label: t('nav.contact')||'Contact Us',            to:'/contact' },
+                ].map(({ icon, label, to }) => (
+                  <Link key={to} to={to}>
+                    <motion.div
+                      style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:10, background:'rgba(255,255,255,0.04)', border:'1px solid var(--border)', cursor:'pointer', fontSize:13, fontWeight:500 }}
+                      whileHover={{ background:'rgba(124,58,237,0.1)', borderColor:'rgba(167,139,250,0.3)', x:4 }}
+                      transition={{ duration:0.2 }}>
+                      <span>{icon}</span>{label}
+                      <span style={{ marginLeft:'auto', opacity:0.4 }}>→</span>
+                    </motion.div>
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* ── Featured Campaigns ─────────────────────── */}
+        {campaigns.length > 0 && (
+          <motion.div style={{ marginTop:32 }}
+            initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+              <h2 style={{ fontWeight:800, fontSize:20 }}>🎯 {t('dashboard.campaignsForYou')||'Campaigns for You'}</h2>
+              <Link to="/campaigns"><span style={{ fontSize:13, color:'var(--primary-light)' }}>{t('common.seeAll')||'See all'} →</span></Link>
+            </div>
+            <div className="grid-3">
+              {campaigns.map((c, i) => (
+                <motion.div key={c.campaignId} className="glass-card" style={{ padding:0, overflow:'hidden' }}
+                  whileHover={{ y:-6 }} transition={{ duration:0.25 }}>
+                  <img src={c.imageUrl||'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=400'} alt={c.campaignName}
+                    style={{ width:'100%', height:140, objectFit:'cover' }}/>
+                  <div style={{ padding:'14px 16px' }}>
+                    <p style={{ fontWeight:700, fontSize:14, marginBottom:6, lineHeight:1.4 }}>{c.campaignName}</p>
+                    <div className="progress-bar" style={{ marginBottom:10 }}>
+                      <div className="progress-fill" style={{ width:`${Math.min(100,(c.collectedAmount/c.goalAmount)*100||0)}%` }}/>
+                    </div>
+                    <Link to={`/user/donate/${c.campaignId}`}>
+                      <button className="btn btn-primary btn-sm" style={{ width:'100%', justifyContent:'center' }}>
+                        {t('btn.donate')||'Donate'} 💜
+                      </button>
+                    </Link>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </div>
+      <Footer />
     </div>
   );
 }

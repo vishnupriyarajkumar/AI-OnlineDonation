@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { Sidebar } from './AdminSidebar';
@@ -162,3 +163,4 @@ export default function ManageDonations() {
     </div>
   );
 }
+

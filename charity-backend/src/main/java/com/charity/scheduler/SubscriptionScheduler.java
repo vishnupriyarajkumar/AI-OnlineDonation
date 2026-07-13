@@ -33,7 +33,8 @@ public class SubscriptionScheduler {
     @Scheduled(cron = "0 0 8 * * *")
     public void sendDailyReminders() {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
-        List<Subscription> due = subscriptionRepo.findSubscriptionsDueTomorrow(tomorrow);
+        List<Subscription> due = subscriptionRepo.findByDonorTypeAndStatusAndNextDonationDate(
+                Subscription.DonorType.MONTHLY, Subscription.SubscriptionStatus.ACTIVE, tomorrow);
 
         log.info("Subscription reminders: {} donor(s) have donations due tomorrow ({})",
                 due.size(), tomorrow);
@@ -63,7 +64,8 @@ public class SubscriptionScheduler {
     @Scheduled(cron = "0 0 9 * * *")
     public void processDueSubscriptions() {
         LocalDate today = LocalDate.now();
-        List<Subscription> due = subscriptionRepo.findDueSubscriptions(today);
+        List<Subscription> due = subscriptionRepo.findByDonorTypeAndStatusAndNextDonationDateLessThanEqual(
+                Subscription.DonorType.MONTHLY, Subscription.SubscriptionStatus.ACTIVE, today);
 
         log.info("Processing {} subscription(s) due on {}", due.size(), today);
 

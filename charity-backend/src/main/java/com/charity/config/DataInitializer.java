@@ -13,8 +13,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * Auto-seeds the database with roles, admin user, sample users, and campaigns
@@ -26,14 +24,15 @@ import java.time.format.DateTimeFormatter;
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
 
-    private final RoleRepository     roleRepository;
-    private final UserRepository     userRepository;
-    private final CampaignRepository campaignRepository;
-    private final DonationRepository donationRepository;
-    private final ReceiptRepository  receiptRepository;
-    private final AuditLogRepository auditLogRepository;
+    private final RoleRepository         roleRepository;
+    private final UserRepository         userRepository;
+    private final CampaignRepository     campaignRepository;
+    private final DonationRepository     donationRepository;
+    private final ReceiptRepository      receiptRepository;
+    private final AuditLogRepository     auditLogRepository;
     private final UserActivityRepository userActivityRepository;
-    private final PasswordEncoder    passwordEncoder;
+    private final SubscriptionRepository subscriptionRepository;
+    private final PasswordEncoder        passwordEncoder;
 
     @Override
     @Transactional
@@ -41,6 +40,7 @@ public class DataInitializer implements CommandLineRunner {
         seedRoles();
         seedAdminUser();
         seedSampleUsers();
+        seedSubscriptionsForExistingUsers();
         seedCampaigns();
         seedSampleDonations();
         seedSampleAuditLogs();
@@ -129,6 +129,28 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
             log.info("  Created user: {}", email);
         }
+    }
+
+    /**
+     * Ensures every verified user has a Subscription row with firstLoginDone=true.
+     * This prevents the onboarding redirect loop for seeded/existing users.
+     */
+    private void seedSubscriptionsForExistingUsers() {
+        userRepository.findAll().forEach(user -> {
+            if (Boolean.TRUE.equals(user.getIsVerified())) {
+                subscriptionRepository.findByUser(user).orElseGet(() -> {
+                    Subscription sub = Subscription.builder()
+                            .user(user)
+                            .donorType(Subscription.DonorType.GENERAL)
+                            .status(Subscription.SubscriptionStatus.ACTIVE)
+                            .firstLoginDone(true)
+                            .build();
+                    subscriptionRepository.save(sub);
+                    log.info("  Seeded subscription for user: {}", user.getEmail());
+                    return sub;
+                });
+            }
+        });
     }
 
     private void seedCampaigns() {
@@ -311,12 +333,12 @@ public class DataInitializer implements CommandLineRunner {
             {riya,  "LOGIN_SUCCESS",    "User", riya.getUserId(),  "192.168.1.5",   "Login successful",                          now.minusDays(3)},
             {arjun, "USER_REGISTERED",  "User", arjun.getUserId(), "10.0.0.3",      "Account created via email",                 now.minusDays(8)},
             {arjun, "LOGIN_SUCCESS",    "User", arjun.getUserId(), "10.0.0.3",      "Login successful",                          now.minusDays(2)},
-            {arjun, "DONATION_INITIATED","Donation", 1L,           "10.0.0.3",      "Amount: ₹2500",                             now.minusDays(2).plusHours(1)},
+            {arjun, "DONATION_INITIATED","Campaign", "1",           "10.0.0.3",      "Amount: ₹2500",                             now.minusDays(2).plusHours(1)},
             {priya, "USER_REGISTERED",  "User", priya.getUserId(), "10.0.0.9",      "Account created via email",                 now.minusDays(6)},
             {priya, "LOGIN_FAILED",     "User", priya.getUserId(), "10.0.0.9",      "Failed password attempt #1",                now.minusDays(5)},
             {priya, "LOGIN_SUCCESS",    "User", priya.getUserId(), "10.0.0.9",      "Login successful",                          now.minusDays(4)},
-            {admin, "CAMPAIGN_CREATED", "Campaign", 1L,            "127.0.0.1",     "Clean Water for Rural Villages",            now.minusDays(15)},
-            {admin, "CAMPAIGN_CREATED", "Campaign", 2L,            "127.0.0.1",     "Education for Every Child",                 now.minusDays(15)},
+            {admin, "CAMPAIGN_CREATED", "Campaign", "1",            "127.0.0.1",     "Clean Water for Rural Villages",            now.minusDays(15)},
+            {admin, "CAMPAIGN_CREATED", "Campaign", "2",            "127.0.0.1",     "Education for Every Child",                 now.minusDays(15)},
             {admin, "LOGIN_SUCCESS",    "User", admin.getUserId(), "127.0.0.1",     "Login successful. Role: ADMIN",             now.minusHours(3)},
         };
 
@@ -325,7 +347,7 @@ public class DataInitializer implements CommandLineRunner {
                     .user((User) entry[0])
                     .action((String) entry[1])
                     .entityType((String) entry[2])
-                    .entityId((Long) entry[3])
+                    .entityId(entry[3] != null ? entry[3].toString() : null)
                     .ipAddress((String) entry[4])
                     .details((String) entry[5])
                     .build());

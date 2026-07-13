@@ -4,6 +4,7 @@ import Footer from '../../components/Footer';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 export default function Contact() {
@@ -85,15 +86,16 @@ export default function Contact() {
     <div>
       <Navbar />
       <div className="container" style={{ paddingTop:80, paddingBottom:80 }}>
-        <div className="page-header text-center" style={{ marginBottom:48 }}>
-          <h1>{t('contactUs') || 'Contact'} <span className="gradient-text">Us</span></h1>
-          <p style={{ color:'var(--text-muted)' }}>{t('contactSubtitle') || "We'd love to hear from you. Reach out anytime!"}</p>
-        </div>
+        <motion.div className="page-header text-center" style={{ marginBottom:48 }}
+          initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}>
+          <h1>{t('ctc.title') || 'Contact'} <span className="gradient-text">Us</span></h1>
+          <p style={{ color:'var(--text-muted)' }}>{t('ctc.subtitle') || "We'd love to hear from you. Reach out anytime!"}</p>
+        </motion.div>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1.3fr', gap:48, maxWidth:920, margin:'0 auto' }}>
           {/* Contact info */}
           <div>
-            <h3 style={{ fontWeight:800, marginBottom:24 }}>{t('getInTouch') || 'Get in Touch'}</h3>
+            <h3 style={{ fontWeight:800, marginBottom:24 }}>{t('ctc.getInTouch') || 'Get in Touch'}</h3>
             {[
               ['📧','Email',     'newdawnfoundationtrust@gmail.com'],
               ['📞','Phone',     '+91 98765 43210'],
@@ -132,12 +134,12 @@ export default function Contact() {
             <form onSubmit={submit}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
                 <div className="form-group">
-                  <label>{t('yourName') || 'Your Name'} *</label>
+                  <label>{t('contact.yourName') || 'Your Name'} *</label>
                   <input className="form-control" name="name" value={form.name}
                     onChange={handle} required placeholder="Full Name" />
                 </div>
                 <div className="form-group">
-                  <label>{t('emailAddress') || 'Email Address'} *</label>
+                  <label>{t('contact.email') || 'Email Address'} *</label>
                   <input className="form-control" type="email" name="email"
                     value={form.email} onChange={handle} required placeholder="you@example.com" />
                 </div>
@@ -158,13 +160,13 @@ export default function Contact() {
               </div>
 
               <div className="form-group">
-                <label>{t('subject') || 'Subject'} *</label>
+                <label>{t('contact.subject') || 'Subject'} *</label>
                 <input className="form-control" name="subject" value={form.subject}
                   onChange={handle} required placeholder="What is this about?" />
               </div>
 
               <div className="form-group">
-                <label>{t('message') || 'Message'} *</label>
+                <label>{t('contact.message') || 'Message'} *</label>
                 <textarea className="form-control" name="message" rows={5}
                   value={form.message} onChange={handle} required
                   placeholder="Tell us how we can help…" />
@@ -172,9 +174,7 @@ export default function Contact() {
 
               <button type="submit" className="btn btn-primary w-full"
                 disabled={sending} style={{ justifyContent:'center', padding:'14px' }}>
-                {sending
-                  ? (t('sending') || 'Sending…')
-                  : (t('sendMessage') || 'Send Message 📤')}
+                {sending ? (t('contact.sending') || 'Sending…') : (t('contact.send') || 'Send Message 📤')}
               </button>
             </form>
           </div>

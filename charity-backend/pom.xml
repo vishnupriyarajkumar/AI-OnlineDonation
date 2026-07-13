@@ -34,9 +34,10 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
+    <!-- MongoDB -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-jpa</artifactId>
+      <artifactId>spring-boot-starter-data-mongodb</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -55,12 +56,7 @@
       <artifactId>spring-boot-starter-aop</artifactId>
     </dependency>
 
-    <!-- MySQL -->
-    <dependency>
-      <groupId>com.mysql</groupId>
-      <artifactId>mysql-connector-j</artifactId>
-      <scope>runtime</scope>
-    </dependency>
+    <!-- MongoDB (replaces MySQL + JPA) — SINGLE declaration above -->
 
     <!-- Lombok -->
     <dependency>

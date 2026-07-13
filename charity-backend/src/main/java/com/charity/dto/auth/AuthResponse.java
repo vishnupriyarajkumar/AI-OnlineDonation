@@ -18,7 +18,7 @@ import lombok.*;
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AuthResponse {
-    private Long    userId;
+    private String  userId;
     private String  fullName;
     private String  email;
     private String  role;
@@ -26,11 +26,9 @@ public class AuthResponse {
     private String  refreshToken;
     private String  message;
 
-    /** True = account not yet verified, redirect to OTP page */
     @Builder.Default
     private boolean needsVerification = false;
 
-    /** True = first successful login — show subscription onboarding */
     @Builder.Default
     private boolean isFirstLogin = false;
 

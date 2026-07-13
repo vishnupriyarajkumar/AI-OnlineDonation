@@ -37,7 +37,7 @@ public class DonationController {
     @PostMapping("/user/donations/{donationId}/order")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createOrder(
-            @PathVariable Long donationId) throws Exception {
+            @PathVariable String donationId) throws Exception {
         return ResponseEntity.ok(ApiResponse.ok("Razorpay order created",
                 paymentService.createOrder(donationId)));
     }
@@ -45,7 +45,7 @@ public class DonationController {
     @PostMapping("/user/donations/{donationId}/verify")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<ApiResponse<DonationResponse>> verifyPayment(
-            @PathVariable Long donationId,
+            @PathVariable String donationId,
             @RequestParam String razorpayOrderId,
             @RequestParam String razorpayPaymentId,
             @RequestParam String razorpaySignature) throws Exception {

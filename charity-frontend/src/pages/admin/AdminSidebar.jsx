@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 
 const NAV = [
@@ -27,17 +28,22 @@ export function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        {NAV.map(({ to, icon, label }) => {
+        {NAV.map(({ to, icon, label }, i) => {
           const active = to === '/'
             ? pathname === '/'
             : to === '/admin'
             ? pathname === '/admin'
             : pathname.startsWith(to);
           return (
-            <Link key={to} to={to} className={`sidebar-link ${active ? 'active' : ''}`}>
-              <span style={{ fontSize:18 }}>{icon}</span>
-              {label}
-            </Link>
+            <motion.div key={to}
+              initial={{ opacity:0, x:-20 }}
+              animate={{ opacity:1, x:0 }}
+              transition={{ delay: i * 0.05 }}>
+              <Link to={to} className={`sidebar-link ${active ? 'active' : ''}`}>
+                <span style={{ fontSize:18 }}>{icon}</span>
+                {label}
+              </Link>
+            </motion.div>
           );
         })}
       </nav>
