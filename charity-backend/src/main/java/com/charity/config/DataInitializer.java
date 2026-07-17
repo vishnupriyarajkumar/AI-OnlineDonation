@@ -57,6 +57,10 @@ public class DataInitializer implements CommandLineRunner {
             roleRepository.save(Role.builder().roleName(Role.RoleName.USER).build());
             log.info("Created USER role");
         }
+        if (roleRepository.findByRoleName(Role.RoleName.NGO).isEmpty()) {
+            roleRepository.save(Role.builder().roleName(Role.RoleName.NGO).build());
+            log.info("Created NGO role");
+        }
     }
 
     private void seedAdminUser() {
@@ -106,6 +110,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private void seedSampleUsers() {
         Role userRole = roleRepository.findByRoleName(Role.RoleName.USER).orElseThrow();
+        Role ngoRole  = roleRepository.findByRoleName(Role.RoleName.NGO).orElseThrow();
         String encodedPwd = passwordEncoder.encode("User@1234");
 
         createUserIfMissing("Riya Sharma",   "riya@example.com",           "+919876500001", userRole, encodedPwd);
@@ -116,6 +121,11 @@ public class DataInitializer implements CommandLineRunner {
         // Additional test users
         createUserIfMissing("Vishnu Priya",  "vishnupriyarajkumar7@gmail.com", "+919944586029", userRole,
                 passwordEncoder.encode("Vish123@1234"));
+        // Sample NGO organizations
+        createUserIfMissing("Smile Foundation NGO", "smilefoundation@ngo.org", "+919876500010", ngoRole,
+                passwordEncoder.encode("Ngo@1234"));
+        createUserIfMissing("CRY India NGO",        "cry@ngo.org",            "+919876500011", ngoRole,
+                passwordEncoder.encode("Ngo@1234"));
     }
 
     private void createUserIfMissing(String name, String email, String phone, Role role, String pwd) {

@@ -46,7 +46,15 @@ export default function DonationFlow() {
   // ── Fetch campaign ──────────────────────────────────────────
   useEffect(() => {
     axiosInstance.get(`/api/campaigns/public/${id}`)
-      .then(r => { setCampaign(r.data?.data); setIsOffline(false); })
+      .then(r => {
+        const c = r.data?.data;
+        setCampaign(c);
+        setIsOffline(false);
+        if (c?.status === 'CLOSED' || c?.status === 'COMPLETED') {
+          toast.error('This campaign has already reached its goal and is closed.');
+          navigate('/campaigns');
+        }
+      })
       .catch(err => {
         if (!err.response) {
           setIsOffline(true);
@@ -66,6 +74,15 @@ export default function DonationFlow() {
   const initiate = async () => {
     if (!amount || Number(amount) < 10) {
       toast.error('Minimum donation is ₹10'); return;
+    }
+    const remaining = campaign?.remainingAmount != null ? Number(campaign.remainingAmount) : Infinity;
+    if (remaining <= 0) {
+      toast.error('This campaign has already reached its fundraising goal.'); return;
+    }
+    if (Number(amount) > remaining) {
+      toast.error(`You can donate a maximum of ₹${remaining.toLocaleString('en-IN')}. This campaign only requires the remaining amount to reach its goal.`);
+      setAmount(String(remaining));
+      return;
     }
     setLoading(true);
 

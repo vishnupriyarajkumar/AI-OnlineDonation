@@ -8,9 +8,13 @@ import toast from 'react-hot-toast';
 const STATUS_COLOR = {
   ACTIVE:    { bg:'rgba(16,185,129,0.12)',  color:'#10b981', border:'rgba(16,185,129,0.3)'  },
   DRAFT:     { bg:'rgba(148,163,184,0.12)', color:'#94a3b8', border:'rgba(148,163,184,0.3)' },
-  COMPLETED: { bg:'rgba(59,130,246,0.12)',  color:'#60a5fa', border:'rgba(59,130,246,0.3)'  },
-  CLOSED:    { bg:'rgba(239,68,68,0.12)',   color:'#ef4444', border:'rgba(239,68,68,0.3)'   },
+  COMPLETED: { bg:'rgba(16,185,129,0.18)',  color:'#10b981', border:'rgba(16,185,129,0.4)'  },
+  CLOSED:    { bg:'rgba(16,185,129,0.18)',  color:'#10b981', border:'rgba(16,185,129,0.4)'  },
 };
+
+const isGoalReached = c =>
+  c.status === 'CLOSED' || c.status === 'COMPLETED' ||
+  (Number(c.collectedAmount) >= Number(c.goalAmount) && Number(c.goalAmount) > 0);
 
 export default function ManageCampaigns() {
   const [campaigns, setCampaigns] = useState([]);
@@ -169,9 +173,15 @@ export default function ManageCampaigns() {
                             </div>
                           </td>
                           <td>
-                            <span style={{ borderRadius:99, padding:'3px 10px', fontSize:11, fontWeight:700, background:st.bg, color:st.color, border:`1px solid ${st.border}` }}>
-                              {c.status}
-                            </span>
+                            {isGoalReached(c) ? (
+                              <span style={{ borderRadius:99, padding:'3px 10px', fontSize:11, fontWeight:700, background:'linear-gradient(135deg,rgba(16,185,129,0.2),rgba(52,211,153,0.15))', color:'#10b981', border:'1px solid rgba(16,185,129,0.4)' }}>
+                                🎉 COMPLETED
+                              </span>
+                            ) : (
+                              <span style={{ borderRadius:99, padding:'3px 10px', fontSize:11, fontWeight:700, background:st.bg, color:st.color, border:`1px solid ${st.border}` }}>
+                                {c.status}
+                              </span>
+                            )}
                           </td>
                           <td>
                             <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>

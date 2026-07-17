@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { login as loginApi } from '../../api/authService';
 import { useLanguage } from '../../context/LanguageContext';
 import toast from 'react-hot-toast';
+import InfinityRibbon from '../../components/InfinityRibbon';
 
 const PARTICLES = [
   { emoji: '💜', x: 5,  y: 15, d: 0   }, { emoji: '🌟', x: 90, y: 10, d: 0.8 },
@@ -26,7 +27,11 @@ export default function Login() {
   const emailRef = useRef(null);
 
   useEffect(() => {
-    if (user) navigate(user.role === 'ADMIN' ? '/admin' : '/user', { replace: true });
+    if (user) {
+      if (user.role === 'ADMIN') navigate('/admin', { replace: true });
+      else if (user.role === 'NGO') navigate('/ngo', { replace: true });
+      else navigate('/user', { replace: true });
+    }
   }, [user, navigate]);
 
   useEffect(() => {
@@ -59,7 +64,9 @@ export default function Login() {
       }
       login(data);
       toast.success(`Welcome back, ${data.fullName?.split(' ')[0]}! 🎉`);
-      navigate(data.isFirstLogin ? '/onboarding' : (data.role === 'ADMIN' ? '/admin' : '/user'), { replace: true });
+      const target = data.isFirstLogin ? '/onboarding' :
+        (data.role === 'ADMIN' ? '/admin' : (data.role === 'NGO' ? '/ngo' : '/user'));
+      navigate(target, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Login failed. Please try again.';
       toast.error(msg, { duration: 5000 });
@@ -106,11 +113,10 @@ export default function Login() {
             🔐 Secure Login
           </motion.div>
           <motion.div
-            style={{ fontSize: 60, lineHeight: 1, marginBottom: 8 }}
-            animate={{ rotate: [0, -5, 5, 0] }}
-            transition={{ duration: 4, repeat: Infinity, delay: 1 }}
+            style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}
+            initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}
           >
-            💜
+            <InfinityRibbon size={90} />
           </motion.div>
           <motion.h1
             className="auth-title gradient-text"

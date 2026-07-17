@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -23,6 +24,7 @@ public class PaymentService {
 
     private final DonationRepository donationRepository;
     private final TransactionRepository transactionRepository;
+    private final CampaignRepository campaignRepository;
     private final DonationService donationService;
 
     @Value("${razorpay.key.id}")
@@ -31,9 +33,30 @@ public class PaymentService {
     @Value("${razorpay.key.secret}")
     private String keySecret;
 
+    @Transactional
     public Map<String, Object> createOrder(String donationId) throws Exception {
         Donation donation = donationRepository.findById(donationId)
                 .orElseThrow(() -> new RuntimeException("Donation not found"));
+
+        // Re-fetch campaign with latest data for concurrency safety
+        Campaign campaign = campaignRepository.findById(donation.getCampaign().getCampaignId())
+                .orElseThrow(() -> new RuntimeException("Campaign not found"));
+
+        if (campaign.getStatus() == Campaign.CampaignStatus.CLOSED ||
+            campaign.getStatus() == Campaign.CampaignStatus.COMPLETED) {
+            throw new RuntimeException("This campaign is closed and no longer accepting donations");
+        }
+
+        BigDecimal remaining = campaign.getGoalAmount().subtract(campaign.getCollectedAmount());
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            campaign.setStatus(Campaign.CampaignStatus.CLOSED);
+            campaignRepository.save(campaign);
+            throw new RuntimeException("This campaign has already reached its fundraising goal");
+        }
+        if (donation.getAmount().compareTo(remaining) > 0) {
+            throw new RuntimeException(
+                "Donation amount exceeds remaining goal. Maximum allowed: \u20b9" + remaining.toPlainString());
+        }
 
         if (keyId.contains("XXX")) {
             Transaction txn = Transaction.builder()

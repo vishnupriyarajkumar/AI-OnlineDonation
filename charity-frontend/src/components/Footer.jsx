@@ -55,7 +55,6 @@ export default function Footer() {
   const NAV_LINKS = [
     { to: '/',          label: t('nav.home')      || 'Home' },
     { to: '/campaigns', label: t('nav.campaigns') || 'Campaigns' },
-    { to: '/about',     label: t('nav.about')     || 'About' },
     { to: '/contact',   label: t('nav.contact')   || 'Contact' },
   ];
 

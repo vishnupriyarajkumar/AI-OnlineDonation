@@ -8,6 +8,7 @@ import {
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { Sidebar } from './AdminSidebar';
+import InfinityRibbon from '../../components/InfinityRibbon';
 
 export { Sidebar };
 
@@ -106,7 +107,8 @@ export default function AdminDashboard() {
                 Welcome back, {user?.fullName||'Admin'} — {new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}
               </p>
             </div>
-            <div style={{ display:'flex',gap:10 }}>
+            <div style={{ display:'flex',gap:10,alignItems:'center' }}>
+              <InfinityRibbon size={48} style={{ marginRight: 4 }} />
               <Link to="/admin/campaigns/new" className="btn btn-primary btn-sm">+ New Campaign</Link>
               <Link to="/admin/activities"    className="btn btn-secondary btn-sm">📡 Activities</Link>
             </div>

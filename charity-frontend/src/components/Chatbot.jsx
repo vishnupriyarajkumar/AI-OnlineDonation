@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getT } from '../i18n/index';
 import toast from 'react-hot-toast';
+import InfinityRibbon from './InfinityRibbon';
 
 // ── Multilingual knowledge base ──────────────────────────────
 function buildKB(lang) {
@@ -284,11 +285,23 @@ export default function Chatbot() {
 
   return (
     <>
-      {/* FAB */}
-      <button className="chatbot-fab" onClick={() => setOpen(p => !p)} aria-label="Open chatbot"
-        style={{ transform: open ? 'scale(1.1) rotate(15deg)' : 'scale(1)' }}>
-        {open ? '✕' : '💬'}
-      </button>
+      {/* FAB — Infinity Ribbon */}
+      <div style={{ position: 'fixed', bottom: 28, right: 104, zIndex: 9997 }}>
+        {open ? (
+          <button
+            onClick={() => setOpen(false)}
+            style={{ width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,var(--primary),var(--primary-light))', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#fff', boxShadow: '0 8px 28px rgba(124,58,237,0.5)' }}
+            aria-label="Close chatbot"
+          >✕</button>
+        ) : (
+          <InfinityRibbon
+            size={54}
+            onChatOpen={() => setOpen(true)}
+            aiThinking={typing}
+            hasNotification={false}
+          />
+        )}
+      </div>
 
       {/* Window */}
       {open && (

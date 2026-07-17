@@ -27,6 +27,8 @@ export default function CampaignDetails() {
 
   const pct = campaign.progressPercent?.toFixed(1);
   const urgencyColors = { LOW:'#10b981', MEDIUM:'#f59e0b', HIGH:'#ef4444', CRITICAL:'#dc2626' };
+  const isClosed = campaign.status === 'CLOSED' || campaign.status === 'COMPLETED';
+  const goalAchieved = Number(campaign.collectedAmount) >= Number(campaign.goalAmount);
 
   return (
     <div>
@@ -41,10 +43,16 @@ export default function CampaignDetails() {
                  style={{ width:'100%', height:400, objectFit:'cover', borderRadius:14, marginBottom:28 }} />
             <div className="flex gap-2 items-center" style={{ marginBottom:16 }}>
               <span className="badge badge-active">{campaign.category}</span>
-              <span style={{ fontSize:13, color:urgencyColors[campaign.urgencyLevel], fontWeight:700 }}>
-                ⚡ {t(campaign.urgencyLevel?.toLowerCase()) || campaign.urgencyLevel} {t('urgency') || 'Urgency'}
-              </span>
-              <span className="badge badge-active">{campaign.status}</span>
+              {isClosed ? (
+                <span style={{ background:'linear-gradient(135deg,#10b981,#34d399)', color:'#fff', borderRadius:99, padding:'3px 12px', fontSize:12, fontWeight:700 }}>🎉 COMPLETED</span>
+              ) : (
+                <>
+                  <span style={{ fontSize:13, color:urgencyColors[campaign.urgencyLevel], fontWeight:700 }}>
+                    ⚡ {t(campaign.urgencyLevel?.toLowerCase()) || campaign.urgencyLevel} {t('urgency') || 'Urgency'}
+                  </span>
+                  <span className="badge badge-active">{campaign.status}</span>
+                </>
+              )}
             </div>
             <h1 style={{ fontSize:32, fontWeight:900, marginBottom:16 }}>{campaign.campaignName}</h1>
             <p style={{ color:'var(--text-muted)', lineHeight:1.8, marginBottom:28 }}>{campaign.description}</p>
@@ -74,20 +82,22 @@ export default function CampaignDetails() {
                   </span>
                 </div>
                 <div className="progress-bar" style={{ height:10 }}>
-                  <div className="progress-fill" style={{ width:`${campaign.progressPercent}%` }} />
+                  <div className="progress-fill" style={{ width:`${campaign.progressPercent}%`, background: isClosed ? 'linear-gradient(90deg,#10b981,#34d399)' : undefined }} />
                 </div>
                 <div className="flex justify-between" style={{ fontSize:13, marginTop:8 }}>
                   <span style={{ color:'var(--text-muted)' }}>
                     {t('goal') || 'Goal'}: ₹{Number(campaign.goalAmount).toLocaleString('en-IN')}
                   </span>
-                  <span style={{ color:'var(--primary-light)', fontWeight:700 }}>{pct}%</span>
+                  <span style={{ color: isClosed ? '#10b981' : 'var(--primary-light)', fontWeight:700 }}>{isClosed ? '100% Completed 🎉' : `${pct}%`}</span>
                 </div>
               </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
                 <div className="card" style={{ padding:14, textAlign:'center' }}>
-                  <div style={{ fontSize:18, fontWeight:800, color:'#10b981' }}>
-                    ₹{Number(campaign.remainingAmount).toLocaleString('en-IN')}
-                  </div>
+                  {goalAchieved ? (
+                    <div style={{ fontSize:13, fontWeight:800, color:'#10b981' }}>🎉 Goal Achieved</div>
+                  ) : (
+                    <div style={{ fontSize:18, fontWeight:800, color:'#10b981' }}>₹{Number(campaign.remainingAmount).toLocaleString('en-IN')}</div>
+                  )}
                   <div style={{ fontSize:11, color:'var(--text-muted)' }}>{t('remaining') || 'Remaining'}</div>
                 </div>
                 <div className="card" style={{ padding:14, textAlign:'center' }}>
@@ -95,7 +105,19 @@ export default function CampaignDetails() {
                   <div style={{ fontSize:11, color:'var(--text-muted)' }}>{t('daysLeft') || 'Days Left'}</div>
                 </div>
               </div>
-      {user?.role === 'USER' ? (
+      {isClosed ? (
+                <div>
+                  <div style={{ background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.3)', borderRadius:10, padding:'16px 20px', textAlign:'center', marginBottom:12 }}>
+                    <div style={{ fontSize:16, fontWeight:800, color:'#10b981', marginBottom:6 }}>✅ Fundraising Goal Achieved</div>
+                    <p style={{ fontSize:12, color:'var(--text-muted)', lineHeight:1.6, margin:0 }}>
+                      This campaign has successfully reached its fundraising goal. Thank you for your generous support. No further donations are being accepted.
+                    </p>
+                  </div>
+                  <button className="btn w-full" disabled style={{ justifyContent:'center', fontSize:15, opacity:0.5, cursor:'not-allowed', background:'rgba(255,255,255,0.06)', color:'var(--text-muted)' }}>
+                    Target Achieved 🎉
+                  </button>
+                </div>
+              ) : user?.role === 'USER' ? (
                 <Link to={`/user/donate/${campaign.campaignId}`}
                   className="btn btn-primary w-full" style={{ justifyContent:'center', fontSize:16 }}>
                   <motion.span whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }} style={{ display:'flex', alignItems:'center', gap:8, justifyContent:'center', width:'100%' }}>

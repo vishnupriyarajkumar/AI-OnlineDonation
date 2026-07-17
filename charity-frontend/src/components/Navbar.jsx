@@ -3,15 +3,16 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import NotificationPanel from './NotificationPanel';
 import LanguageSelector from './LanguageSelector';
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth();
-  const { t } = useLanguage();           // re-renders whenever lang changes
+  const { t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
-  const [scrolled,  setScrolled]  = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -22,20 +23,21 @@ export default function Navbar() {
   const isActive = (p) => pathname === p || (p !== '/' && pathname.startsWith(p));
 
   const NAV_LINKS = [
-    { to: '/',          label: t('nav.home')         || 'Home'          },
-    { to: '/campaigns', label: t('nav.campaigns')    || 'Campaigns'     },
-    { to: '/about',     label: t('nav.about')        || 'About'         },
-    { to: '/contact',   label: t('nav.contact')      || 'Contact'       },
+    { to: '/',          label: t('nav.home')      || 'Home'      },
+    { to: '/campaigns', label: t('nav.campaigns') || 'Campaigns' },
+    { to: '/contact',   label: t('nav.contact')   || 'Contact'   },
   ];
 
   return (
     <motion.nav
       className="navbar"
       style={{
-        background: scrolled ? 'rgba(8,8,20,0.95)' : 'rgba(8,8,20,0.6)',
+        background: scrolled
+          ? theme === 'dark' ? 'rgba(8,8,20,0.97)' : 'rgba(255,255,255,0.97)'
+          : theme === 'dark' ? 'rgba(8,8,20,0.6)'  : 'rgba(255,255,255,0.7)',
         backdropFilter: 'blur(24px)',
-        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : '1px solid transparent',
-        boxShadow: scrolled ? '0 4px 30px rgba(0,0,0,0.4)' : 'none',
+        borderBottom: scrolled ? '1px solid var(--border)' : '1px solid transparent',
+        boxShadow: scrolled ? '0 4px 30px rgba(0,0,0,0.15)' : 'none',
         transition: 'all 0.3s ease',
       }}
       initial={{ y: -80, opacity: 0 }}
@@ -44,16 +46,13 @@ export default function Navbar() {
     >
       {/* Logo */}
       <Link to="/" style={{ textDecoration: 'none' }}>
-        <motion.div
-          className="nav-logo"
-          whileHover={{ scale: 1.03 }}
-          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-        >
-          <motion.span
-            style={{ fontSize: 22 }}
+        <motion.div className="nav-logo" whileHover={{ scale: 1.03 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <motion.span style={{ fontSize: 22 }}
             animate={{ rotate: [0, -5, 5, 0] }}
-            transition={{ duration: 4, repeat: Infinity, delay: 2 }}
-          >💜</motion.span>
+            transition={{ duration: 4, repeat: Infinity, delay: 2 }}>
+            💜
+          </motion.span>
           <span className="gradient-text" style={{ fontWeight: 900, fontSize: 17 }}>
             New Dawn Foundation
           </span>
@@ -71,13 +70,10 @@ export default function Navbar() {
             >
               {label}
               {isActive(to) && (
-                <motion.div
-                  layoutId="nav-underline"
-                  style={{
-                    position: 'absolute', bottom: 2, left: 14, right: 14,
-                    height: 2, background: 'var(--primary-light)', borderRadius: 99,
-                  }}
-                />
+                <motion.div layoutId="nav-underline" style={{
+                  position: 'absolute', bottom: 2, left: 14, right: 14,
+                  height: 2, background: 'var(--primary-light)', borderRadius: 99,
+                }} />
               )}
             </motion.span>
           </Link>
@@ -86,18 +82,47 @@ export default function Navbar() {
         {/* Language selector */}
         <LanguageSelector />
 
+        {/* Theme toggle */}
+        <motion.button
+          onClick={toggleTheme}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          style={{
+            background: 'rgba(255,255,255,0.07)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            width: 36, height: 36,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', fontSize: 17, flexShrink: 0,
+            transition: 'all 0.2s',
+          }}
+          aria-label="Toggle theme"
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={theme}
+              initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+              animate={{ rotate: 0, opacity: 1, scale: 1 }}
+              exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+              transition={{ duration: 0.2 }}
+              style={{ display: 'flex' }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </motion.span>
+          </AnimatePresence>
+        </motion.button>
+
         {/* Auth area */}
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <motion.span
-              style={{
-                fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99,
-                background: 'rgba(108,60,232,0.15)', color: 'var(--primary-light)',
-                border: '1px solid rgba(108,60,232,0.3)', whiteSpace: 'nowrap',
-              }}
+            <motion.span style={{
+              fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99,
+              background: 'rgba(108,60,232,0.15)', color: 'var(--primary-light)',
+              border: '1px solid rgba(108,60,232,0.3)', whiteSpace: 'nowrap',
+            }}
               animate={{ opacity: [0.8, 1, 0.8] }}
-              transition={{ repeat: Infinity, duration: 3 }}
-            >
+              transition={{ repeat: Infinity, duration: 3 }}>
               {isAdmin() ? '👑 ADMIN' : '💜 DONOR'}
             </motion.span>
             {!isAdmin() && <NotificationPanel />}
@@ -108,7 +133,7 @@ export default function Navbar() {
               </motion.button>
             </Link>
             <motion.button onClick={logout} className="btn btn-sm"
-              style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.2)' }}
+              style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}
               whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
               {t('nav.logout') || 'Logout'}
             </motion.button>

@@ -23,6 +23,13 @@ import DonationFlow from './pages/user/DonationFlow';
 import Profile from './pages/user/Profile';
 import SubscriptionOnboarding from './pages/user/SubscriptionOnboarding';
 import SubscriptionManagement from './pages/user/SubscriptionManagement';
+import BlockchainVerify from './pages/user/BlockchainVerify';
+
+// NGO Pages
+import NgoDashboard from './pages/ngo/NgoDashboard';
+import NgoCampaigns from './pages/ngo/NgoCampaigns';
+import NgoCreateCampaign from './pages/ngo/NgoCreateCampaign';
+import NgoAnalytics from './pages/ngo/NgoAnalytics';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -49,7 +56,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/campaigns/:id" element={<CampaignDetails />} />
-          <Route path="/about" element={<About />} />
+          <Route path="/about" element={<Navigate to="/" replace />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -64,6 +71,13 @@ export default function App() {
           <Route path="/user/profile" element={<ProtectedRoute roles={['USER']}><Profile /></ProtectedRoute>} />
           <Route path="/user/subscription" element={<ProtectedRoute roles={['USER']}><SubscriptionManagement /></ProtectedRoute>} />
           <Route path="/onboarding" element={<ProtectedRoute roles={['USER']}><SubscriptionOnboarding /></ProtectedRoute>} />
+          <Route path="/user/blockchain" element={<ProtectedRoute roles={['USER']}><BlockchainVerify /></ProtectedRoute>} />
+
+          {/* NGO */}
+          <Route path="/ngo" element={<ProtectedRoute roles={['NGO']}><NgoDashboard /></ProtectedRoute>} />
+          <Route path="/ngo/campaigns" element={<ProtectedRoute roles={['NGO']}><NgoCampaigns /></ProtectedRoute>} />
+          <Route path="/ngo/create" element={<ProtectedRoute roles={['NGO']}><NgoCreateCampaign /></ProtectedRoute>} />
+          <Route path="/ngo/analytics" element={<ProtectedRoute roles={['NGO']}><NgoAnalytics /></ProtectedRoute>} />
 
           {/* Admin */}
           <Route path="/admin" element={<ProtectedRoute roles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />

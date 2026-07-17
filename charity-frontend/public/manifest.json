@@ -1,0 +1,46 @@
+{
+  "name": "CharityOrg - Donate & Change Lives",
+  "short_name": "CharityOrg",
+  "description": "A premium AI-powered donation platform with blockchain transparency and multilingual support.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f1a",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "categories": ["finance", "social", "lifestyle"],
+  "lang": "en",
+  "shortcuts": [
+    {
+      "name": "Browse Campaigns",
+      "url": "/campaigns",
+      "description": "Explore active fundraising campaigns"
+    },
+    {
+      "name": "My Donations",
+      "url": "/user/donations",
+      "description": "View your donation history"
+    }
+  ]
+}

@@ -89,8 +89,14 @@ public class AuthService {
             throw new RuntimeException("Mobile number is already registered");
         }
 
-        Role role = roleRepository.findByRoleName(Role.RoleName.USER)
-                .orElseThrow(() -> new RuntimeException("Default role not found"));
+        Role.RoleName targetRole = Role.RoleName.USER;
+        if (req.getRole() != null && "NGO".equalsIgnoreCase(req.getRole().trim())) {
+            targetRole = Role.RoleName.NGO;
+        }
+        final Role.RoleName finalRoleName = targetRole;
+
+        Role role = roleRepository.findByRoleName(finalRoleName)
+                .orElseThrow(() -> new RuntimeException("Role " + finalRoleName + " not found"));
 
         User user = User.builder()
                 .fullName(req.getFullName())

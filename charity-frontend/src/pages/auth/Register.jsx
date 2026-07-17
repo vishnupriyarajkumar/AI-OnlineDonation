@@ -19,7 +19,7 @@ const PWD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{
 export default function Register() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ fullName:'', email:'', mobile:'', address:'', password:'', confirmPassword:'', preferredLanguage:'en' });
+  const [form, setForm] = useState({ fullName:'', email:'', mobile:'', address:'', password:'', confirmPassword:'', preferredLanguage:'en', role:'USER' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
@@ -99,6 +99,7 @@ export default function Register() {
         password: form.password,
         confirmPassword: form.confirmPassword,
         preferredLanguage: form.preferredLanguage,
+        role: form.role,
       });
       toast.success('Account created! Please verify your email. 📧');
       navigate('/verify-account', { state: { email: form.email.trim() } });
@@ -209,6 +210,37 @@ export default function Register() {
               <input {...inputProps('confirmPassword', showConfirm?'text':'password', 'Repeat your password')} style={{ paddingLeft:42, paddingRight:48 }} autoComplete="new-password"/>
               <EyeBtn show={showConfirm} toggle={()=>setShowConfirm(p=>!p)}/>
             </Field>
+
+            {/* Account Type */}
+            <div className="form-group">
+              <label className="form-label">🔑 Account Type</label>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                <motion.button type="button"
+                  onClick={()=>set('role', 'USER')}
+                  whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }}
+                  style={{
+                    padding:'10px', borderRadius:10, fontSize:13, fontWeight:600,
+                    border: form.role==='USER' ? '2px solid var(--primary-light)' : '1px solid var(--border)',
+                    background: form.role==='USER' ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.04)',
+                    color: form.role==='USER' ? 'var(--primary-light)' : 'var(--text-muted)',
+                    cursor:'pointer', display:'flex', alignItems:'center', gap:6, justifyContent:'center',
+                  }}>
+                  👤 Donor
+                </motion.button>
+                <motion.button type="button"
+                  onClick={()=>set('role', 'NGO')}
+                  whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }}
+                  style={{
+                    padding:'10px', borderRadius:10, fontSize:13, fontWeight:600,
+                    border: form.role==='NGO' ? '2px solid #06b6d4' : '1px solid var(--border)',
+                    background: form.role==='NGO' ? 'rgba(6,182,212,0.15)' : 'rgba(255,255,255,0.04)',
+                    color: form.role==='NGO' ? '#38bdf8' : 'var(--text-muted)',
+                    cursor:'pointer', display:'flex', alignItems: 'center', gap:6, justifyContent:'center',
+                  }}>
+                  🏢 Charity Organization
+                </motion.button>
+              </div>
+            </div>
 
             {/* Language */}
             <div className="form-group">

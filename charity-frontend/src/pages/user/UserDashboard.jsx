@@ -7,6 +7,8 @@ import axiosInstance from '../../api/axiosInstance';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import toast from 'react-hot-toast';
+import GamificationWidget from '../../components/GamificationWidget';
+import VoiceAssistant from '../../components/VoiceAssistant';
 
 /* ── Stat Card ─────────────────────────────────────── */
 function StatCard({ icon, label, value, color, delay, prefix='', suffix='' }) {
@@ -46,6 +48,8 @@ export default function UserDashboard() {
   const navigate = useNavigate();
 
   const [donations,  setDonations]  = useState([]);
+  const [stats,      setStats]      = useState({ totalDonated: 0, campaignsBacked: 0, totalTransactions: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
   const [sub,        setSub]        = useState(null);
   const [campaigns,  setCampaigns]  = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -69,8 +73,14 @@ export default function UserDashboard() {
   }, [firstName, hour, lang]);
 
   useEffect(() => {
+    // Fetch stats separately for real-time accuracy
+    axiosInstance.get('/api/user/stats')
+      .then(r => setStats(r.data?.data || { totalDonated: 0, campaignsBacked: 0, totalTransactions: 0 }))
+      .catch(() => {})
+      .finally(() => setStatsLoading(false));
+
     Promise.all([
-      axiosInstance.get('/api/user/donations').catch(()=>({ data:{ data:[] } })),
+      axiosInstance.get('/api/user/donations/my').catch(()=>({ data:{ data:[] } })),
       axiosInstance.get('/api/user/subscription/status').catch(()=>({ data:{ data:null } })),
       axiosInstance.get('/api/campaigns/public').catch(()=>({ data:{ data:[] } })),
       axiosInstance.get('/api/user/profile').catch(()=>({ data:{ data:null } })),
@@ -82,8 +92,10 @@ export default function UserDashboard() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const totalDonated   = donations.filter(d=>d.status==='COMPLETED').reduce((s,d)=>s+Number(d.amount||0),0);
-  const campaignsBacked = [...new Set(donations.filter(d=>d.status==='COMPLETED').map(d=>d.campaignId))].length;
+  // Use backend-computed stats; fall back to client-side calculation if stats not yet loaded
+  const totalDonated    = statsLoading ? null : stats.totalDonated;
+  const campaignsBacked = statsLoading ? null : stats.campaignsBacked;
+  const totalTx         = statsLoading ? null : stats.totalTransactions;
 
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
@@ -127,12 +139,29 @@ export default function UserDashboard() {
 
         {/* ── Stats ──────────────────────────────────────── */}
         <div className="grid-4" style={{ marginBottom:32 }}>
-          <StatCard icon="💰" label={t('totalDonated')||'Total Donated'}      value={`₹${totalDonated.toLocaleString('en-IN')}`} color="#a78bfa" delay={0}   />
-          <StatCard icon="🎯" label={t('campaignsBacked')||'Campaigns Backed'} value={campaignsBacked}  color="#34d399" delay={0.1} />
-          <StatCard icon="📋" label={t('totalTransactions')||'Total Transactions'} value={donations.length} color="#60a5fa" delay={0.2} />
-          <StatCard icon="📅" label={t('myPlan')||'Plan'}
-            value={sub?.donorType==='MONTHLY' ? `⭐ ${t('sub.monthlyGiving')||'Monthly'}` : `🎁 ${t('sub.generalDonor')||'General'}`}
-            color="#fbbf24" delay={0.3} />
+          {statsLoading ? (
+            [0,1,2,3].map(i => (
+              <div key={i} className="stat-card" style={{ borderRadius:16 }}>
+                <div className="skeleton" style={{ width:52, height:52, borderRadius:12, flexShrink:0 }} />
+                <div style={{ flex:1 }}>
+                  <div className="skeleton" style={{ height:28, width:'60%', borderRadius:6, marginBottom:8 }} />
+                  <div className="skeleton" style={{ height:12, width:'80%', borderRadius:6 }} />
+                </div>
+              </div>
+            ))
+          ) : (
+            <>
+              <StatCard icon="💰" label={t('totalDonated')||'Total Donated'}
+                value={`₹${Number(totalDonated||0).toLocaleString('en-IN')}`} color="#a78bfa" delay={0} />
+              <StatCard icon="🎯" label={t('campaignsBacked')||'Campaigns Backed'}
+                value={campaignsBacked||0} color="#34d399" delay={0.1} />
+              <StatCard icon="📋" label={t('totalTransactions')||'Total Transactions'}
+                value={totalTx||0} color="#60a5fa" delay={0.2} />
+              <StatCard icon="📅" label={t('myPlan')||'Plan'}
+                value={sub?.donorType==='MONTHLY' ? `⭐ ${t('sub.monthlyGiving')||'Monthly'}` : `🎁 ${t('sub.generalDonor')||'General'}`}
+                color="#fbbf24" delay={0.3} />
+            </>
+          )}
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:24 }}>
@@ -180,6 +209,9 @@ export default function UserDashboard() {
 
           {/* ── Right Panel ────────────────────────────── */}
           <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+
+            {/* Gamification widget */}
+            <GamificationWidget />
 
             {/* Profile card */}
             <motion.div className="glass-card" style={{ padding:24 }}
@@ -271,6 +303,7 @@ export default function UserDashboard() {
                 {[
                   { icon:'💜', label: t('btn.donateNow')||'Donate Now',         to:'/campaigns' },
                   { icon:'📋', label: t('myDonations')||'All My Donations',     to:'/user/donations' },
+                  { icon:'🔗', label: t('nav.blockchain')||'Blockchain Verification', to:'/user/blockchain' },
                   { icon:'👤', label: t('editProfile')||'Edit Profile',          to:'/user/profile' },
                   { icon:'📬', label: t('nav.contact')||'Contact Us',            to:'/contact' },
                 ].map(({ icon, label, to }) => (
@@ -320,6 +353,7 @@ export default function UserDashboard() {
           </motion.div>
         )}
       </div>
+      <VoiceAssistant />
       <Footer />
     </div>
   );

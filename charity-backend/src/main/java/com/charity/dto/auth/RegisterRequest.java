@@ -40,6 +40,8 @@ public class RegisterRequest {
 
     private String preferredLanguage = "en";
 
+    private String role = "USER"; // Default to USER role
+
     public boolean isEmailRegistration() {
         return "MOBILE".equalsIgnoreCase(registrationMethod) == false
             && (email != null && !email.isBlank());

@@ -1,8 +1,10 @@
 package com.charity.controller;
 
 import com.charity.dto.ApiResponse;
+import com.charity.entity.Donation;
 import com.charity.entity.Notification.NotificationType;
 import com.charity.entity.User;
+import com.charity.repository.DonationRepository;
 import com.charity.repository.UserRepository;
 import com.charity.service.LoginHistoryService;
 import com.charity.service.NotificationService;
@@ -18,8 +20,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/user")
@@ -29,9 +34,40 @@ import java.util.Map;
 public class UserController {
 
     private final UserRepository      userRepository;
+    private final DonationRepository  donationRepository;
     private final NotificationService notificationService;
     private final PasswordEncoder     passwordEncoder;
     private final LoginHistoryService loginHistoryService;
+
+    // ── DONATION STATS ────────────────────────────────────────
+
+    @GetMapping("/stats")
+    @Operation(summary = "Get donor stats: totalDonated, campaignsBacked, totalTransactions")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDonorStats(
+            @AuthenticationPrincipal UserDetails ud) {
+        User user = resolve(ud);
+        List<Donation> completed = donationRepository.findByUserUserId(user.getUserId())
+                .stream()
+                .filter(d -> d.getStatus() == Donation.DonationStatus.SUCCESS
+                          || d.getStatus() == Donation.DonationStatus.COMPLETED)
+                .toList();
+
+        BigDecimal totalDonated = completed.stream()
+                .map(Donation::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Set<String> uniqueCampaigns = new java.util.HashSet<>();
+        completed.forEach(d -> {
+            if (d.getCampaign() != null) uniqueCampaigns.add(d.getCampaign().getCampaignId());
+        });
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalDonated",      totalDonated);
+        result.put("campaignsBacked",   uniqueCampaigns.size());
+        result.put("totalTransactions", completed.size());
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
 
     // ── GET profile ───────────────────────────────────────────
 
